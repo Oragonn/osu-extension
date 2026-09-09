@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Threading;
 using osu.Framework.Audio.Track;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Beatmaps;
@@ -18,6 +19,7 @@ using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Game.Skinning;
+using osu.Game.Storyboards;
 
 namespace OsuEnhancer.RulesetBridge;
 
@@ -240,13 +242,26 @@ public static partial class Bridge
 
 /// <summary>
 /// Decodes a .osu file's text synchronously and serves it as an in-memory
-/// <see cref="WorkingBeatmap"/> -- adapted from ppy/osu-tools's
-/// ProcessorWorkingBeatmap (MIT Licence, Copyright (c) ppy Pty Ltd
-/// &lt;contact@ppy.sh&gt;), reading from a string instead of a file path, and
-/// caching by beatmap ID (an .osu file for a given ranked beatmap ID never
-/// changes) so repeated calls for the same beatmap don't re-parse it.
+/// beatmap, caching by beatmap ID (an .osu file for a given ranked beatmap ID
+/// never changes) so repeated calls for the same beatmap don't re-parse it.
+///
+/// Implements <see cref="IWorkingBeatmap"/> directly rather than extending
+/// the abstract <see cref="WorkingBeatmap"/> base class. That base class's
+/// <c>Beatmap</c> property routes through an async Task-based
+/// <c>loadBeatmapAsync</c>/<c>GetResultSafely</c> pipeline (with a 10-second
+/// timeout) built for a real desktop thread pool; under the single-threaded
+/// Mono browser-wasm interpreter that pipeline fails, and its catch block
+/// reports the failure via <c>Logger.Error(...)</c> -- which is what actually
+/// triggers <c>osu.Framework.RuntimeInfo</c>'s browser-incompatible
+/// OS-detection to run and throw (confirmed by decompiling both an early,
+/// crashing build of this bridge and a working reference build: RuntimeInfo,
+/// DebugUtils, and Logger were byte-for-byte identical in both -- the only
+/// difference was which code path got exercised). Implementing the interface
+/// directly avoids that inherited machinery entirely; <see cref="Beatmap"/>
+/// and <see cref="GetPlayableBeatmap(IRulesetInfo, IReadOnlyList{Mod})"/>
+/// below are plain synchronous code.
 /// </summary>
-internal sealed class BridgeWorkingBeatmap : WorkingBeatmap
+internal sealed class BridgeWorkingBeatmap : IWorkingBeatmap
 {
     private static readonly Dictionary<string, BridgeWorkingBeatmap> Cache = new();
 
@@ -263,7 +278,6 @@ internal sealed class BridgeWorkingBeatmap : WorkingBeatmap
     }
 
     private BridgeWorkingBeatmap(Beatmap beatmap)
-        : base(beatmap.BeatmapInfo, null)
     {
         this.beatmap = beatmap;
         beatmap.BeatmapInfo.Ruleset = new OsuRuleset().RulesetInfo;
@@ -276,9 +290,93 @@ internal sealed class BridgeWorkingBeatmap : WorkingBeatmap
         return osu.Game.Beatmaps.Formats.Decoder.GetDecoder<Beatmap>(reader).Decode(reader);
     }
 
-    protected override IBeatmap GetBeatmap() => beatmap;
-    public override Texture GetBackground() => throw new NotImplementedException();
-    protected override Track GetBeatmapTrack() => throw new NotImplementedException();
-    protected override ISkin GetSkin() => throw new NotImplementedException();
-    public override Stream GetStream(string storagePath) => throw new NotImplementedException();
+    public IBeatmapInfo BeatmapInfo => beatmap.BeatmapInfo;
+    public bool BeatmapLoaded => true;
+    public bool TrackLoaded => false;
+    public IBeatmap Beatmap => beatmap;
+
+    public Texture GetBackground() => throw new NotSupportedException();
+    public Texture GetPanelBackground() => throw new NotSupportedException();
+    public Waveform Waveform => throw new NotSupportedException();
+    public Storyboard Storyboard => throw new NotSupportedException();
+    public ISkin Skin => throw new NotSupportedException();
+    public Track Track => throw new NotSupportedException();
+    public Track LoadTrack() => throw new NotSupportedException();
+    public Stream GetStream(string storagePath) => throw new NotSupportedException();
+    public void BeginAsyncLoad() { }
+    public void CancelAsyncLoad() { }
+    public void PrepareTrackForPreview(bool looping, double? offsetFromPreviewPoint = null) { }
+
+    public IBeatmap GetPlayableBeatmap(IRulesetInfo rulesetInfo, IReadOnlyList<Mod> mods = null)
+        => GetPlayableBeatmap(rulesetInfo, mods ?? Array.Empty<Mod>(), CancellationToken.None);
+
+    /// <summary>
+    /// A conversion pipeline dictated by osu.Game's own mod-application
+    /// interfaces (IApplicableToBeatmapConverter must run before conversion,
+    /// IApplicableAfterBeatmapConversion after, etc. -- their names describe
+    /// the required order, this isn't a stylistic choice). Written fresh
+    /// against those public, MIT-licensed interfaces.
+    /// </summary>
+    public IBeatmap GetPlayableBeatmap(IRulesetInfo rulesetInfo, IReadOnlyList<Mod> mods, CancellationToken cancellationToken)
+    {
+        var rulesetInstance = rulesetInfo.CreateInstance()
+                               ?? throw new RulesetLoadException("Creating ruleset instance failed when attempting to create playable beatmap.");
+        var converter = rulesetInstance.CreateBeatmapConverter(beatmap);
+
+        if (beatmap.HitObjects.Count > 0 && !converter.CanConvert())
+            throw new osu.Game.Rulesets.UI.BeatmapInvalidForRulesetException("Beatmap cannot be converted for the requested ruleset.");
+
+        foreach (var mod in mods.OfType<IApplicableToBeatmapConverter>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            mod.ApplyToBeatmapConverter(converter);
+        }
+
+        var converted = converter.Convert(cancellationToken);
+
+        foreach (var mod in mods.OfType<IApplicableAfterBeatmapConversion>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            mod.ApplyToBeatmap(converted);
+        }
+
+        foreach (var mod in mods.OfType<IApplicableToDifficulty>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            mod.ApplyToDifficulty(converted.Difficulty);
+        }
+
+        var processor = rulesetInstance.CreateBeatmapProcessor(converted);
+        if (processor != null)
+        {
+            foreach (var mod in mods.OfType<IApplicableToBeatmapProcessor>())
+                mod.ApplyToBeatmapProcessor(processor);
+            processor.PreProcess();
+        }
+
+        foreach (var hitObject in converted.HitObjects)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            hitObject.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty, cancellationToken);
+        }
+
+        foreach (var mod in mods.OfType<IApplicableToHitObject>())
+        {
+            foreach (var hitObject in converted.HitObjects)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                mod.ApplyToHitObject(hitObject);
+            }
+        }
+
+        processor?.PostProcess();
+
+        foreach (var mod in mods.OfType<IApplicableToBeatmap>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            mod.ApplyToBeatmap(converted);
+        }
+
+        return converted;
+    }
 }

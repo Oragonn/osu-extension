@@ -31,6 +31,14 @@ window.addEventListener('message', (event) => {
     const runtime = await dotnet.create();
     const config = runtime.getConfig();
     bridgeExports = await runtime.getAssemblyExports(config.mainAssemblyName);
+    // Must run before any decode/calculate call: registers a headless
+    // RulesetStore with the beatmap decoder. Without this, the decoder logs
+    // a "falling back to default AssemblyRulesetStore" warning on first use,
+    // which is enough to trip the browser-wasm RuntimeInfo crash documented
+    // in engine-bridge/FINDINGS.md.
+    const initRaw = bridgeExports.OsuEnhancer.RulesetBridge.Bridge.Initialize();
+    const initResult = JSON.parse(initRaw);
+    if (initResult.error) throw new Error(initResult.error);
     post({ type: 'ready' });
   } catch (err) {
     post({ type: 'init-error', error: String((err && err.message) || err) });

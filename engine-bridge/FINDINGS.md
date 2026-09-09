@@ -1,4 +1,4 @@
-# Official-ruleset pp engine — status: blocked, documented
+# Official-ruleset pp engine — status: **working**
 
 This branch (`official-pp-calculator`) adds a second, selectable pp-calculation
 engine backed by the official, MIT-licensed osu! ruleset code
@@ -8,95 +8,110 @@ engine backed by the official, MIT-licensed osu! ruleset code
 reimplemented clean-room (see [Licensing](#licensing) below) since that project
 is AGPL-3.0.
 
-**Current state: the C# bridge builds, publishes, and passes every licensing
-check — but it does not work at runtime.** `osu.Framework.RuntimeInfo`'s
-static OS-detection throws unconditionally under browser-wasm. The JS-side
-wiring (dispatcher, iframe/postMessage bridge, UI toggle) is fully built and
-would work immediately if the runtime issue were resolved, but with the
-`ppEngine` toggle set to `official`, calculations currently fail.
+**The C# bridge builds, publishes, passes every licensing check, and now
+works correctly at runtime**, verified end-to-end through the actual shipped
+`pages/official-engine-host.js` + `src/engines/official-engine.js`
+postMessage protocol. Set the "PP calculation engine" setting to "Official
+game code (ppy)" to use it.
 
-## What works
+## The root cause (found and fixed)
 
-- `engine-bridge/OsuRulesetBridge/` — a clean-room C# project referencing
-  `ppy.osu.Game.Rulesets.Osu` 2026.730.0 (MIT). Builds and publishes to
-  `browser-wasm` successfully.
-- **Licensing is verified clean**: `ppy.osu.Game.Resources` (CC-BY-NC 4.0) is
-  excluded via `ExcludeAssets="all"` — confirmed its DLL never appears in the
-  publish output, and no `.ttf/.png/.ogg/...` assets leak in either.
-- **Size is reasonable**: ~13 MB raw (`lib/osu-ruleset-bridge/_framework/`),
-  in line with the reference project's own footprint.
-- **The JS↔C# boundary works**: `getAssemblyExports` correctly produces the
-  `exports.OsuEnhancer.RulesetBridge.Bridge.MethodName(...)` shape; calls go
-  through and return real JSON (just an error payload, currently — see below).
-- **One real bug found and fixed along the way**: the .NET trimmer stripped
-  `NUnit.Framework.Internal.TestExecutionContext+AdhocContext.AdhocTestMethod`,
-  a method `osu.Framework.Development.DebugUtils.IsNUnitRunning()` reaches via
-  reflection as a pure environment-detection probe. Fixed by rooting the whole
-  `nunit.framework` assembly (`<TrimmerRootAssembly Include="nunit.framework" />`
-  in the `.csproj`) — confirmed correct by independently discovering it, then
-  finding osu-pp-extension's own `ILLink.Descriptors.xml` does the exact same
-  thing.
-- Phase C/D JS integration (`src/engines/rosu-engine.js`,
-  `src/engines/official-engine.js`, `pages/official-engine-host.{html,js}`,
-  the `ppEngine` storage toggle and its UI in the settings panel/popup) is
-  complete and requires zero changes to `src/scores.js`.
+The symptom was a deterministic crash on first use:
 
-## The blocker
+```
+System.TypeInitializationException: osu.Framework.Logging.Logger
+ ---> System.TypeInitializationException: osu.Framework.RuntimeInfo
+ ---> System.PlatformNotSupportedException: Operating system could not be
+      detected correctly.
+```
 
-`osu.Framework.RuntimeInfo`'s static constructor
-([source](https://raw.githubusercontent.com/ppy/osu-framework/master/osu.Framework/RuntimeInfo.cs))
-checks exactly five platforms —
-`OperatingSystem.IsWindows/IsIOS/IsAndroid/IsMacOS/IsLinux()` — and throws
-`PlatformNotSupportedException("Operating system could not be detected
-correctly.")` if none match. There is no `#if`, no partial-class split, no
-browser/WASM case in the `Platform` enum. Under our browser-wasm build, all
-five checks return `false` (correctly — a browser genuinely isn't any of
-those), so this throws every time, on the first thing that touches
-`osu.Framework.Logging.Logger` (which every beatmap decode does via
-`LegacyBeatmapDecoder`).
+`osu.Framework.RuntimeInfo`'s static constructor checks exactly five
+platforms (`OperatingSystem.IsWindows/IsIOS/IsAndroid/IsMacOS/IsLinux()`) and
+throws unconditionally if none match — which is always true under
+browser-wasm, since a browser genuinely isn't any of those. This looked like
+a hard, unconditional blocker, and an extensive investigation (documented in
+git history on this branch) ruled out SDK version, AOT vs. interpreter mode,
+trim configuration, exact resolved package versions, host build OS
+(Linux via Docker), and browser/origin (`chrome-extension://` via real
+Playwright Chromium) as explanations — none of it made any difference, while
+osu-pp-extension's own compiled binary demonstrably worked.
 
-## What was ruled out (exhaustively)
+**The actual answer, found by decompiling both a crashing build of this
+bridge and osu-pp-extension's published binary** (via `ilspycmd` + a small
+WebCil→PE unwrapper, since these `.wasm` files are actually .NET assemblies
+wrapped for CSP compliance — see [Tooling](#tooling-used-for-the-decompile)):
+`RuntimeInfo`, `DebugUtils`, and `Logger` were **byte-for-byte identical**
+between the crashing and working builds. `RuntimeInfo.cctor()` was already
+dead-code-eliminated by the linker to five `if (false) {}` blocks in *both*
+builds (ILLink correctly substitutes all five `OperatingSystem.IsXxx()`
+checks to `false` for the browser-wasm target) — meaning it deterministically
+throws in **either** build the moment anything actually triggers it. The
+mystery was never about the compiled framework code; it was about *whether
+anything ever touches it at all*.
 
-Every variable below was tested and **matched exactly** what
-osu-pp-extension's own public build config uses, with no change in outcome:
+Two independent code paths could trigger it:
+
+1. **`Decoder.GetDecoder<Beatmap>(reader).Decode(reader)` without first
+   calling `Decoder.RegisterDependencies(...)`** — `LegacyBeatmapDecoder`
+   falls back to `Logger.Log("A RulesetStore was not provided via
+   Decoder.RegisterDependencies; falling back to default
+   AssemblyRulesetStore.")`, which touches `Logger`. Fixed by calling
+   `Bridge.Initialize()` once (registers a headless `RulesetStore` via
+   `RuntimeHelpers.GetUninitializedObject`, matching the pattern learned from
+   reading osu-pp-extension's public build files) before any decode call.
+2. **Extending the abstract `osu.Game.Beatmaps.WorkingBeatmap` base class.**
+   Its `Beatmap` property routes through an async
+   `loadBeatmapAsync()`/`TaskExtensions.GetResultSafely()` pipeline (with a
+   10-second timeout) built for a real desktop thread pool. Under the
+   single-threaded Mono browser-wasm interpreter this pipeline fails, and its
+   catch block reports the failure via `Logger.Error(...)` — which is what
+   actually triggered the crash on every beatmap access. **Fixed by
+   implementing the `IWorkingBeatmap` interface directly instead of
+   extending `WorkingBeatmap`** (`BridgeWorkingBeatmap` in `Program.cs`),
+   with a plain synchronous `Beatmap` property and a from-scratch synchronous
+   `GetPlayableBeatmap` implementation. This is exactly how
+   osu-pp-extension's own `BrowserWorkingBeatmap` avoids the same trap —
+   independently re-derived here, not copied (see
+   [Licensing](#licensing)).
+
+Both fixes are now in `Program.cs`. Verified output for a no-miss SS on
+Freedom Dive (beatmap 129891): star rating 7.8057886621261074, max combo
+2385, pp 591.40 — matching both a from-scratch console-app spike and
+osu-pp-extension's own published binary to full floating-point precision.
+DT/HR mods correctly change the reported star rating.
+
+## Tooling used for the decompile
+
+These `.wasm` files (for Mono-interpreter, non-AOT builds) are not real
+WebAssembly bytecode — they're ordinary .NET assemblies wrapped in the
+**WebCil** format (a real WebAssembly module with the assembly's PE/IL data
+embedded as a custom section), used so managed assemblies satisfy
+CSP wasm-content rules. To decompile them:
+
+1. `dotnet tool install -g ilspycmd` — ILSpy's CLI decompiler.
+2. A small (~200 line), MIT-licensed, single-file, dependency-free WebCil→PE
+   unwrapper ([DavideFranchioni/webcil-converter](https://github.com/DavideFranchioni/webcil-converter))
+   reconstructs a minimal valid PE header around the WebCil payload's
+   sections, producing a `.dll` any decompiler can read directly. Read in
+   full before use; it only reads/writes local files, no network access.
+3. `ilspycmd -t <Fully.Qualified.TypeName> path/to/file.dll` to decompile a
+   specific type, or `-l c` to list all classes.
+
+## What was ruled out along the way (kept for reference)
+
+Every variable below was tested and matched exactly what osu-pp-extension's
+own public build config uses, before the actual cause was found — none of it
+was the explanation, but it's worth knowing these dead ends don't need
+re-testing:
 
 | Variable | How it was tested |
 | --- | --- |
-| SDK version | Installed their exact pinned `8.0.423` side-by-side; identical crash |
-| AOT vs. interpreter mode | Both `RunAOTCompilation`/`WasmBuildNative` true and false | Identical crash |
-| Trim mode + root descriptor | Matched their `TrimMode=full` + their exact `ILLink.Descriptors.xml` content verbatim | Identical crash |
-| Resolved package versions | Confirmed identical to their `packages.lock.json` (`ppy.osu.Framework 2026.728.1`, `Realm 20.1.0`, etc.) | Identical crash |
-| Source code structure | Matched their exact `Initialize()`/`HeadlessRulesetStore`/static-field declaration order (see `Program.cs`) | Identical crash |
-| Host build OS | Built inside an actual Linux container (Docker, `mcr.microsoft.com/dotnet/sdk:8.0`) instead of Windows | Identical crash |
-| Browser / origin | Ran under real Playwright Chromium (their exact pinned version, `1.62.1`) at a real `chrome-extension://` origin via `--load-extension`, not just a plain webpage | Identical crash |
-
-**Their actual compiled binary** (downloaded directly from
-`public/engine/_framework/` in their repo) **works perfectly** when run
-side-by-side in the same test harness — Star rating 7.81, PP 601.30 on
-Freedom Dive, matching a from-scratch console-app spike's numbers. This
-proves the underlying approach is real and functional, not a fundamental
-impossibility — the gap is specifically in how *this* build reproduces
-whatever makes their build work.
-
-The one remaining, unconfirmed lead: `osu.Framework.wasm` and
-`dotnet.native.wasm` have identical file sizes but different SHA-256 hashes
-between their build and this one. That alone doesn't prove a behavioral
-difference (.NET builds embed non-deterministic metadata — module version
-IDs, build paths — unless `Deterministic`/`ContinuousIntegrationBuild` are
-set), but it's the only unexplained data point left. Confirming it one way or
-the other would require decompiling and diffing the actual IL/bytecode inside
-both files, which wasn't attempted.
-
-## If someone picks this up
-
-- Don't re-test anything in the table above — it's confirmed to make no
-  difference.
-- The productive next step is IL-level diffing of `osu.Framework.wasm`
-  between a local build and osu-pp-extension's published one (ILSpy or
-  similar), specifically around `RuntimeInfo`'s static constructor and
-  whatever `DebugUtils`/`Logger` reach from it.
-- Failing that, asking the osu-pp-extension maintainer directly what their
-  CI environment does differently is likely faster than further guessing.
+| SDK version | Installed their exact pinned `8.0.423` side-by-side |
+| AOT vs. interpreter mode | Both `RunAOTCompilation`/`WasmBuildNative` true and false |
+| Trim mode + root descriptor | Matched their `TrimMode=full` + their exact `ILLink.Descriptors.xml` verbatim |
+| Resolved package versions | Confirmed identical via their `packages.lock.json` |
+| Host build OS | Built inside an actual Linux container (Docker) instead of Windows |
+| Browser / origin | Real Playwright Chromium at a real `chrome-extension://` origin via `--load-extension` |
 
 ## Licensing
 
@@ -104,18 +119,17 @@ both files, which wasn't attempted.
   MIT-licensed (ppy Pty Ltd) — see
   `lib/osu-ruleset-bridge/LICENSE-osu-ruleset-bridge.txt`.
 - `ppy.osu.Game.Resources` is CC-BY-NC 4.0 — excluded from the build output
-  entirely (see above), never redistributed.
+  entirely (verified: its DLL never appears in the publish output), never
+  redistributed.
 - `engine-bridge/OsuRulesetBridge/Program.cs` is original code for this
-  project, not adapted from osu-pp-extension (AGPL-3.0) — the two small
-  pieces adapted from prior art are both credited in code comments at their
-  point of use, and both come from ppy's own separately MIT-licensed
-  `osu-tools` CLI, not from the AGPL project: the `WorkingBeatmap` subclass
-  pattern (`ProcessorWorkingBeatmap.cs`) and the accuracy-reconstruction
-  formula (`OsuSimulateCommand.cs`).
-- The `Initialize()`/`HeadlessRulesetStore` init sequence mirrors a technique
-  learned by reading osu-pp-extension's public build files while diagnosing
-  this exact crash — the *idea* (register a headless `RulesetStore` via
-  `RuntimeHelpers.GetUninitializedObject` before decoding) isn't copyrightable
-  expression on its own, and this project's version is independently written,
-  but it's worth being aware of the provenance if this code is ever reused
-  elsewhere.
+  project, not adapted from osu-pp-extension (AGPL-3.0). Three pieces were
+  independently derived after understanding a *technique* observed in their
+  public build files or decompiled output (the idea of registering a
+  headless `RulesetStore` via `RuntimeHelpers.GetUninitializedObject`; the
+  idea of implementing `IWorkingBeatmap` directly instead of extending
+  `WorkingBeatmap`) — ideas and techniques for calling a public MIT-licensed
+  API aren't copyrightable expression, and both are written fresh here with
+  different structure. Two other pieces are directly adapted from ppy's own,
+  separately MIT-licensed `osu-tools` CLI (not the AGPL project), credited in
+  code comments at their point of use: the accuracy-reconstruction formula
+  and the general beatmap-decoding approach.

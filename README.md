@@ -24,15 +24,16 @@ service, no network calls beyond osu.ppy.sh's own `/osu/<id>` beatmap file
 endpoint (used by the game client itself) and the extension's own bundled
 `.wasm`.
 
-> **Experimental (not yet functional):** a "PP calculation engine" setting
-> exists (rosu-pp / "Official game code") backed by a second, clean-room
-> engine under `engine-bridge/` and `src/engines/official-engine.js`, meant to
-> track osu!'s real pp algorithm more closely than the vendored `rosu-pp-js`
-> can. It currently fails at runtime due to an unresolved `osu.Framework`
-> browser-wasm incompatibility — see
+> **Experimental second engine:** a "PP calculation engine" setting (rosu-pp /
+> "Official game code") switches to a second, clean-room engine under
+> `engine-bridge/` and `src/engines/official-engine.js` that compiles ppy's
+> own official ruleset code to WebAssembly, meant to track osu!'s real pp
+> algorithm more closely than the vendored `rosu-pp-js` can (which lags
+> osu!'s July 2026 pp rework). It works — verified end-to-end — but is new
+> and less battle-tested than the default `rosu-pp` engine; see
 > [`engine-bridge/FINDINGS.md`](engine-bridge/FINDINGS.md) for the full
-> writeup. Leave the engine setting on the default (`rosu-pp`) until that's
-> resolved.
+> technical writeup (including a genuinely wild root-cause hunt for a
+> browser-wasm compatibility bug it took a full decompile-and-diff to find).
 
 ## Install (unpacked, for development/testing)
 
@@ -129,8 +130,8 @@ community projects, per the PRD's licensing requirements:
   Pty Ltd — MIT licensed (see
   `lib/osu-ruleset-bridge/LICENSE-osu-ruleset-bridge.txt`). Used by the
   experimental official-engine bridge under `engine-bridge/`, compiled to
-  WebAssembly by this project's own clean-room code — not currently
-  functional, see `engine-bridge/FINDINGS.md`. The architectural idea (compile
+  WebAssembly by this project's own clean-room code — see
+  `engine-bridge/FINDINGS.md` for the full build/verification writeup. The architectural idea (compile
   the official ruleset to WASM instead of a third-party reimplementation) was
   observed in `winterbirdhere/osu-pp-extension` (AGPL-3.0); no code from that
   project is used here.
@@ -157,7 +158,7 @@ src/
   content.js      orchestrator / entry point (US-001)
 styles/theme.css  all dark-theme + feature-UI CSS
 lib/rosu-pp/            vendored, patched rosu-pp-js + its MIT license
-lib/osu-ruleset-bridge/ compiled official-engine WASM output (experimental, not yet functional)
+lib/osu-ruleset-bridge/ compiled official-engine WASM output (experimental, verified working)
 engine-bridge/          C# source for the official-engine WASM bridge + FINDINGS.md
 icons/            toolbar icons
 ```
