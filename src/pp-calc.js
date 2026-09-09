@@ -25,13 +25,13 @@
   }
 
   /** PP if this play had been a full combo with the same accuracy/mods. */
-  function calculatePpIfFc(beatmapId, { accuracy, mods }) {
-    return OsuEnhancer.ppCalc.calculatePp(beatmapId, { accuracy, mods, misses: 0, combo: undefined });
+  function calculatePpIfFc(beatmapId, { accuracy, mods, isLegacy }) {
+    return OsuEnhancer.ppCalc.calculatePp(beatmapId, { accuracy, mods, isLegacy, misses: 0, combo: undefined });
   }
 
   /** PP at a fixed accuracy breakpoint, assuming full combo. */
-  function calculatePpAtAccuracy(beatmapId, accuracy, mods) {
-    return OsuEnhancer.ppCalc.calculatePp(beatmapId, { accuracy, mods, misses: 0, combo: undefined });
+  function calculatePpAtAccuracy(beatmapId, accuracy, mods, isLegacy) {
+    return OsuEnhancer.ppCalc.calculatePp(beatmapId, { accuracy, mods, isLegacy, misses: 0, combo: undefined });
   }
 
   OsuEnhancer.ppCalc = {

@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "OsuRulesetBridge",
   "resources": {
-    "hash": "sha256-vGwOF3mxuP5UuvMvfW6MoMu0RpG1s+UV7DdDY0vYT3U=",
+    "hash": "sha256-dZkTtwp5Z3K3XcURGL2b+NCVgGiKFNes2VUE/7a367o=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-nElGk+CZFyq0PbPm4JU8avD6lER7x9Z1C54BK7qY12Q="
     },
@@ -23,7 +23,7 @@
       "Microsoft.Win32.Registry.wasm": "sha256-W4Uw3cBloowqcoVgmdbxdUpXc5phVvujPQ+9Ub9gbd8=",
       "MongoDB.Bson.wasm": "sha256-fiBxfNnyp4cw5toLfba38yY2svs2vZFk9cn9v6KWoMY=",
       "Newtonsoft.Json.wasm": "sha256-6tTXxo8y1qiYlYVlCYLFRuqD1Hb/ttHk05oT59wTucI=",
-      "OsuRulesetBridge.wasm": "sha256-VKOTgdPzXHCHJ2h4LEjwGLQxRVhuZm85hOxv7caraNw=",
+      "OsuRulesetBridge.wasm": "sha256-KZO8hRbA+9VPHb42zAHo21CQa6+0GRVUpT7gIbe43rA=",
       "Realm.wasm": "sha256-xmMceqqk6q6SRosnRELrMypBqiI+qrzriYpSZ+TjCWA=",
       "Remotion.Linq.wasm": "sha256-QlINfyeBHGXN+ba/pnnykS7eUy/v94v2rr/gW7m63ok=",
       "Sentry.wasm": "sha256-XFgJSBOTGGPp43nKq4+GlNShOz87DE5xxp9we+RvDHM=",

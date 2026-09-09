@@ -274,6 +274,13 @@
         sliderTailHit: scoreState.sliderEndHits,
         largeTickHit: scoreState.largeTickHits,
         smallTickHit: scoreState.smallTickHits,
+        // Scores set on stable (imported into lazer) use "classic" slider
+        // accuracy/miss-estimation mechanics in the real performance
+        // calculator (gated by an OsuModClassic mod instance + IsLegacyScore
+        // on ScoreInfo, not by any of the fields above) -- omitting this
+        // silently computed every score as if it were lazer-native, which is
+        // wrong for stable-origin scores. See engine-bridge/FINDINGS.md.
+        legacy: !!scoreState.isLegacy,
       });
 
       const result = await call('CalculatePerformance', [beatmap.beatmapId, beatmap.osuFileText, statsJson]);

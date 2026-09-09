@@ -340,6 +340,7 @@
         ppIfFc = await OsuEnhancer.ppCalc.calculatePpIfFc(score.beatmap_id, {
           accuracy: score.accuracy * 100,
           mods,
+          isLegacy: score.legacy_score_id != null,
         });
         if (ppIfFc != null) renderIfFcLabel(row, ppIfFc);
       }
@@ -361,6 +362,7 @@
           sliderEndHits: stats.slider_tail_hit,
           largeTickHits: stats.large_tick_hit,
           smallTickHits: stats.small_tick_hit,
+          isLegacy: score.legacy_score_id != null,
         });
         if (unrankedPp != null) renderUnrankedPp(row, unrankedPp);
       }

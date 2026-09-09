@@ -80,6 +80,29 @@ Freedom Dive (beatmap 129891): star rating 7.8057886621261074, max combo
 osu-pp-extension's own published binary to full floating-point precision.
 DT/HR mods correctly change the reported star rating.
 
+## Follow-up accuracy fix: legacy/classic scoring
+
+After the runtime fix above, calculated pp was noticeably closer to osu!'s
+real values but still slightly off. Cause: `ScoreInfo.IsLegacyScore` was
+never set (defaults to `false`), and `OsuModClassic` was never added to the
+mods list for stable-origin scores. `OsuPerformanceCalculator` gates a real
+chunk of its logic (slider-tail miss estimation, combo-based drop
+estimation) behind `score.Mods.OfType<OsuModClassic>().Any(...)` — so every
+score, regardless of whether it was actually set on stable, was silently
+computed with pure lazer-native scoring mechanics.
+
+Fixed by threading a real `isLegacy` flag through the whole pipeline
+(`scores.js`'s `score.legacy_score_id != null` → `pp-calc.js` →
+`official-engine.js`'s `legacy` field in `statsJson` → `Bridge.
+CalculatePerformance`, which now sets `IsLegacyScore` and adds an
+`OsuModClassic` mod instance when true). Verified effect on Freedom Dive
+(129891), no-miss SS: **591.40 pp (lazer) → 601.3000716683429 pp
+(legacy)** — the legacy number matches osu-pp-extension's own default
+("stable" mode) output to full floating-point precision. A rougher play
+(some 100s/50s/misses) showed a smaller but real difference (476.25 →
+477.43), consistent with the affected logic being about slider-tail/combo
+edge cases rather than a flat multiplier.
+
 ## Tooling used for the decompile
 
 These `.wasm` files (for Mono-interpreter, non-AOT builds) are not real

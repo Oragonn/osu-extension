@@ -105,6 +105,15 @@ public static partial class Bridge
             var input = JsonNode.Parse(statsJson)!.AsObject();
             var mods = ParseMods(ruleset, input["mods"]?.AsArray());
 
+            // Scores set on stable (imported into lazer) use "classic" slider
+            // accuracy/miss-estimation mechanics in the real calculator --
+            // gated by the presence of an OsuModClassic mod instance, not by
+            // any hit-statistics field. Without this, every score is silently
+            // computed as if it were lazer-native.
+            bool legacy = input["legacy"]?.GetValue<bool>() ?? false;
+            if (legacy && !mods.OfType<osu.Game.Rulesets.Osu.Mods.OsuModClassic>().Any())
+                mods = mods.Append(new osu.Game.Rulesets.Osu.Mods.OsuModClassic()).ToArray();
+
             var beatmap = working.GetPlayableBeatmap(ruleset.RulesetInfo, mods);
             int totalObjects = beatmap.HitObjects.Count;
 
@@ -146,6 +155,7 @@ public static partial class Bridge
                 MaxCombo = maxCombo,
                 Statistics = statistics,
                 Mods = mods,
+                IsLegacyScore = legacy,
             };
 
             var difficultyCalculator = ruleset.CreateDifficultyCalculator(working);
