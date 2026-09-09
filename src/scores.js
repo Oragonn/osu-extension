@@ -54,7 +54,7 @@
         if (!result.complete && indexCache && indexCache.key === key) indexCache = null;
       });
     }
-    return indexCache.promise.then((result) => result.index);
+    return indexCache.promise;
   }
 
   const SCORE_LIST_MAX_RETRIES = 3;
@@ -107,9 +107,21 @@
     return { scores, complete: true };
   }
 
-  /** { index, complete }: index is beatmapId -> score JSON, merged across every scores tab osu! exposes for this user. */
+  /**
+   * { index, recentByBeatmap, complete }
+   * - index: beatmapId -> single score JSON, merged across every scores tab
+   *   osu! exposes for this user (first match wins). Correct as long as a
+   *   beatmap only has one score to show, which holds for Pinned/Best/Firsts
+   *   (osu! itself only ever surfaces one row per beatmap there).
+   * - recentByBeatmap: beatmapId -> every "recent" score for that beatmap, in
+   *   the order /users/<id>/scores/recent returns them (newest first).
+   *   Unlike the other 3 types, Recent can legitimately list the same
+   *   beatmap several times in a row (retries) with different pp/accuracy —
+   *   `index` can only remember one of them, so matching needs this instead.
+   */
   async function fetchScoreIndex(userId, mode) {
     const index = new Map();
+    const recentByBeatmap = new Map();
     let complete = true;
     await Promise.all(
       SCORE_TYPES.map(async (type) => {
@@ -117,7 +129,13 @@
           const result = await fetchScoreType(userId, mode, type);
           if (!result.complete) complete = false;
           result.scores.forEach((s) => {
-            if (s && s.beatmap_id != null && !index.has(s.beatmap_id)) index.set(s.beatmap_id, s);
+            if (!s || s.beatmap_id == null) return;
+            if (!index.has(s.beatmap_id)) index.set(s.beatmap_id, s);
+            if (type === 'recent') {
+              let list = recentByBeatmap.get(s.beatmap_id);
+              if (!list) recentByBeatmap.set(s.beatmap_id, (list = []));
+              list.push(s);
+            }
           });
         } catch (err) {
           // A genuine network failure (not "this type doesn't apply to this
@@ -129,7 +147,7 @@
         }
       })
     );
-    return { index, complete };
+    return { index, recentByBeatmap, complete };
   }
 
   function beatmapIdFromRow(row) {
@@ -138,6 +156,34 @@
     const href = link.getAttribute('href') || '';
     const m = href.match(/\/beatmapsets\/\d+#\w+\/(\d+)/) || href.match(/\/beatmaps\/(\d+)/);
     return m ? Number(m[1]) : null;
+  }
+
+  // `index` maps a beatmap to a single score, which breaks when Recent Plays
+  // lists the same beatmap several rows in a row (retries) — every one of
+  // those rows would otherwise get matched to whichever one score happened
+  // to win the merge, showing identical accuracy/pp/IF-FC on all of them
+  // instead of each row's own. When that beatmap does have more than one
+  // "recent" score, this instead counts the row's position among same-
+  // beatmap rows within its own `.play-detail-list` (Pinned/Best/Firsts/
+  // Recent each get their own container) and pairs it with the same
+  // position in recentByBeatmap's array — osu! returns that newest-first,
+  // the same order the rows themselves render top to bottom.
+  function matchScoreToRow(row, index, recentByBeatmap) {
+    const beatmapId = beatmapIdFromRow(row);
+    const recentList = recentByBeatmap.get(beatmapId);
+    if (recentList && recentList.length > 1) {
+      const container = row.closest(sel.scoreRowList);
+      if (container) {
+        const siblings = Array.from(container.querySelectorAll(sel.scoreRow)).filter(
+          (r) => beatmapIdFromRow(r) === beatmapId
+        );
+        const occurrenceIndex = siblings.indexOf(row);
+        if (occurrenceIndex >= 0 && occurrenceIndex < recentList.length) {
+          return recentList[occurrenceIndex];
+        }
+      }
+    }
+    return index.get(beatmapId);
   }
 
   function coverUrlFromScore(score) {
@@ -334,17 +380,6 @@
       await renderStarRating(row, score);
       await renderStatBlock(row, score);
 
-      let ppIfFc = null;
-      if (toggles.ppIfFc && !score.is_perfect_combo) {
-        const mods = (score.mods || []).map((m) => m.acronym);
-        ppIfFc = await OsuEnhancer.ppCalc.calculatePpIfFc(score.beatmap_id, {
-          accuracy: score.accuracy * 100,
-          mods,
-          isLegacy: score.legacy_score_id != null,
-        });
-        if (ppIfFc != null) renderIfFcLabel(row, ppIfFc);
-      }
-
       if (score.pp == null) {
         const mods = (score.mods || []).map((m) => m.acronym);
         // score.statistics uses lazer's judgement names (great/ok/meh/miss) —
@@ -367,6 +402,17 @@
         if (unrankedPp != null) renderUnrankedPp(row, unrankedPp);
       }
 
+      let ppIfFc = null;
+      if (toggles.ppIfFc && !score.is_perfect_combo) {
+        const mods = (score.mods || []).map((m) => m.acronym);
+        ppIfFc = await OsuEnhancer.ppCalc.calculatePpIfFc(score.beatmap_id, {
+          accuracy: score.accuracy * 100,
+          mods,
+          isLegacy: score.legacy_score_id != null,
+        });
+        if (ppIfFc != null) renderIfFcLabel(row, ppIfFc);
+      }
+
       return { row, score, ppIfFc };
     } catch (err) {
       row.removeAttribute(PROCESSED_ATTR);
@@ -382,10 +428,10 @@
     const unprocessed = rows.filter((r) => !r.getAttribute(PROCESSED_ATTR));
     if (unprocessed.length === 0) return [];
 
-    const index = await fetchScoreIndexCached(userId, getCurrentMode());
+    const { index, recentByBeatmap } = await fetchScoreIndexCached(userId, getCurrentMode());
 
     const queue = unprocessed
-      .map((row) => ({ row, score: index.get(beatmapIdFromRow(row)) }))
+      .map((row) => ({ row, score: matchScoreToRow(row, index, recentByBeatmap) }))
       .filter((item) => item.score);
 
     // Rows used to be processed one at a time — each waiting on its own
