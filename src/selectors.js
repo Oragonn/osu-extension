@@ -83,6 +83,19 @@
     navMenuColGroup: '.nav2__colgroup--menu',
     navSearchLink: '.nav2__menu-link-main--search',
 
+    // Individual score permalink page (/scores/<id>), confirmed live: the
+    // acc/max-combo/pp trio is the first ".score-stats__group-row" inside
+    // ".score-stats__group--stats" (two more group-rows follow it for the
+    // judgement-count and slider-tick breakdowns, same class, so this must
+    // stay scoped to the first one rather than a bare ".score-stats__group-row").
+    scoreDetailStatsRow: '.score-stats__group--stats > .score-stats__group-row:first-child',
+    // osu-web hydrates this page's React island from a JSON blob it already
+    // embeds server-side — the exact same score shape (mods/statistics/
+    // beatmap_id/is_perfect_combo/pp/legacy_score_id) as the
+    // /users/<id>/scores/<type> endpoint scores.js fetches, so no extra
+    // network request is needed here.
+    scoreDetailJson: '#json-show',
+
     // Beatmap search filter panel (/beatmapsets). data-filter-value="0" is
     // unique to the Mode section's "osu!" option — every other section uses
     // string keywords (Categories, Explicit, Extra, Played) or values
