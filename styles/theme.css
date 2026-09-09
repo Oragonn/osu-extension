@@ -582,3 +582,22 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   font-size: 12px;
   cursor: pointer;
 }
+
+/* ---------- Score detail page (/scores/<id>) pp stats ---------- */
+
+/* Appended as extra ".score-stats__stat" tiles alongside osu-web's own
+   Accuracy/Max Combo/pp trio (see selectors.scoreDetailStatsRow) — that
+   row is already `display: flex; flex-wrap: wrap` with each tile at
+   `flex: 1 1 0%`, so extra tiles just flow into the same row/wrap onto a
+   second line at narrow widths, no layout rules needed here. Colors reuse
+   the same tiers as the profile score rows: gray for our own estimate
+   (not an official number), pink for a hypothetical (pp if this had been
+   a full combo) — matching .osu-enhancer-unranked-pp and the "IF FC" label
+   respectively. */
+.osu-enhancer-score-detail-pp {
+  color: #cfcfe0;
+}
+
+.osu-enhancer-score-detail-fc {
+  color: #ff66ab;
+}

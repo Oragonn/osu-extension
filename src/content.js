@@ -8,7 +8,8 @@
 
   console.log('[osu! Enhancer] content script loaded on', location.href);
 
-  const { storage, theme, scores, profile, medals, playerCard, settingsPanel, modeFilter } = window.OsuEnhancer;
+  const { storage, theme, scores, scoreDetail, profile, medals, playerCard, settingsPanel, modeFilter } =
+    window.OsuEnhancer;
 
   let currentToggles = null;
   let rescanQueued = false;
@@ -38,9 +39,10 @@
   async function runScoreFeatures(toggles) {
     if (!toggles.ppIfFc && !toggles.coverArt) {
       scores.clearAll();
-      return;
+    } else {
+      await scores.scanAndProcess(toggles);
     }
-    await scores.scanAndProcess(toggles);
+    await scoreDetail.scanAndProcess(toggles);
   }
 
   async function applyAll() {
@@ -127,6 +129,7 @@
       }
     } else if (key === 'ppIfFc' || key === 'coverArt' || key === 'ppEngine') {
       scores.clearAll();
+      scoreDetail.clearAll();
       runScoreFeatures(currentToggles);
     }
   });

@@ -38,6 +38,7 @@
         "src/mode-filter.js",
         "src/cover-art.js",
         "src/scores.js",
+        "src/score-detail.js",
         "src/profile.js",
         "src/medals.js",
         "src/player-card.js",
