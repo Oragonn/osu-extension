@@ -1,0 +1,142 @@
+# osu! Enhancer — Dark Theme + PP Stats
+
+A single Chrome (Manifest V3) extension for `osu.ppy.sh` that combines a
+site-wide dark theme with client-side PP (performance points) calculations,
+so you don't need to install a separate dark-theme userstyle and a separate
+PP-stats extension.
+
+## Features
+
+| Feature | Where to toggle it |
+| --- | --- |
+| Site-wide dark theme (nav, profile, score rows, generic pages) | Toolbar popup or the ⚙ button in osu!'s own nav bar (between "help" and search) |
+| "IF FC ###pp" label on any non-FC score row | same |
+| Beatmap cover art behind score rows | same |
+| Downloadable PNG "player card" on your profile | same |
+| Hide medals you haven't unlocked yet | Button on the Medals section itself |
+| Hide the "medal unlocked" popup | Button on the Medals section itself |
+
+The medal toggles are deliberately *not* in the settings list — they're buttons right above the medal grid, since that's where you'd actually want to flip them.
+
+All PP math runs **entirely client-side** via a bundled WebAssembly build of
+[`rosu-pp`](https://github.com/MaxOhn/rosu-pp) — no third-party PP-calc
+service, no network calls beyond osu.ppy.sh's own `/osu/<id>` beatmap file
+endpoint (used by the game client itself) and the extension's own bundled
+`.wasm`.
+
+## Install (unpacked, for development/testing)
+
+1. Open `chrome://extensions` in Chrome.
+2. Enable **Developer mode** (top-right toggle).
+3. Click **Load unpacked** and select this project folder.
+4. Visit any page on `osu.ppy.sh` — the toolbar icon opens the popup with
+   all toggles.
+
+No build step is required; everything under `src/`, `styles/`, `popup/`,
+and `lib/` is plain JS/CSS/HTML/WASM checked in as-is.
+
+## How it works
+
+- `manifest.json` injects `styles/theme.css` and the scripts in `src/` as a
+  content script on `*://osu.ppy.sh/*`.
+- `src/selectors.js` centralizes every DOM selector the extension relies on
+  (`.play-detail` for score rows, `.medals-group__medal` for medal tiles,
+  `.nav2` for the top nav, etc.), so a future osu! redesign should only
+  require editing that one file.
+- `src/scores.js` doesn't scrape score data from the DOM at all — osu-web's
+  own score rows don't expose combo/full-combo status as visible text, so
+  instead it fetches the same JSON osu!'s React app uses to render the
+  Scores tab (`/users/<id>/scores/<best|firsts|pinned|recent>`, same-origin,
+  uses your existing session cookie) and matches each row back to its score
+  by beatmap id. This is also where the accurate "already full combo?" flag
+  (`is_perfect_combo`) and the beatmap's own cover-art URLs come from.
+- `src/theme.js` adds/removes a `<link>` to `styles/izuki-theme.css` (the
+  vendored full theme, see Credits below) and toggles `html.osu-enhancer-dark`
+  for the extension's own small first-party tweaks, so turning the theme off
+  is instant with no reload.
+- `src/pp-calc.js` wraps the vendored `rosu-pp-js` WASM build to compute PP
+  from a beatmap's own `.osu` file plus a score's accuracy/combo/mods.
+- `src/settings-panel.js` injects a ⚙ button into osu!'s own nav bar
+  (between "help" and the search icon) that opens a small toggle panel —
+  the primary way to control the extension day-to-day. The toolbar popup
+  still works too and stays in sync (same `chrome.storage.local` keys).
+- `src/medals.js` additionally injects two small buttons directly above the
+  medal grid ("Hide locked medals" / "Hide unlock popup") rather than
+  putting those in the settings list.
+- `src/content.js` reads your toggles from `chrome.storage.local`, applies
+  every enabled feature, and re-applies them via a `MutationObserver` since
+  osu.ppy.sh is a single-page app that swaps content in without a full
+  navigation (tab switches, pagination, new medal pops, etc.).
+
+## Known limitations (see PRD Open Questions)
+
+- "Hide locked medals" only hides a tile it can positively identify as
+  locked (a class/attribute containing "locked"/"unearned"/"incomplete");
+  it intentionally never hides a tile it's unsure about, since that specific
+  modifier class wasn't confirmed live.
+- Dark-theme coverage now comes from the full vendored `izuki-theme.css`
+  (35k+ lines covering nearly the whole site), so remaining light panels
+  should be rare — but if osu! ships a markup change that stylesheet
+  doesn't account for, fixing it means editing that vendored file directly
+  (or waiting for -Izuki- to update it upstream), not `styles/theme.css`.
+- This was built and selector-verified against the live site from outside a
+  logged-in session, so pages/states that require being logged in as the
+  viewed user (e.g. the downloadable player card, which reads your own
+  profile stats) should be spot-checked once loaded in a real, logged-in
+  Chrome profile.
+
+## Credits & Inspiration
+
+This project's *scope and visual direction* were inspired by two existing
+community projects, per the PRD's licensing requirements:
+
+- **["Osu!Website Redesign | Dark Theme"](https://github.com/9IZUKI9/Osu-Website-Redisign)**
+  by -Izuki- (also mirrored on [userstyles.world](https://userstyles.world/style/22220/osuwebsite-redesign-dark-theme-accent-colors),
+  also "No License"). Neither the GitHub repo nor the userstyles.world page
+  carries a license. `styles/izuki-theme.css` in this repo **is that
+  userstyle's actual CSS**, vendored verbatim (only the Firefox-only
+  `@-moz-document` wrapper was stripped so Chrome loads it) at the owner's
+  request, for their own personal `Load unpacked` use — it is not
+  original work and shouldn't be redistributed or published as part of this
+  project without sorting out permission from -Izuki- first.
+- **["osu! PP Calculator — 2026 Rework"](https://chromewebstore.google.com/)**
+  (Chrome Web Store extension). No public source repository could be found
+  for this specific listing, so per the PRD, **no code was inspected or
+  copied** — only its general feature concept (PP-if-FC, PP-at-accuracy,
+  PP potential) was used as inspiration, reimplemented independently on top
+  of `rosu-pp-js`.
+- **[`rosu-pp-js`](https://github.com/MaxOhn/rosu-pp-js)** by MaxOhn — MIT
+  licensed (see `lib/rosu-pp/LICENSE-rosu-pp-js.txt`). This one **is**
+  actually used: `lib/rosu-pp/rosu_pp.js` is the published npm package
+  (`rosu-pp-js@4.0.1`, "nodejs" build target) with its Node-only bits
+  (`require('util'/'fs'/'path')`, `__dirname`) replaced with browser
+  globals and a `fetch()`-based async WebAssembly loader, so it can run
+  inside a content script. No calculation logic was changed — see the
+  header comment in that file for the exact patch.
+
+## Project structure
+
+```
+manifest.json
+popup/            toggle UI (US-002)
+src/
+  selectors.js    centralized DOM selectors
+  storage.js      chrome.storage.local wrapper + toggle defaults
+  pp-calc.js      rosu-pp-js wrapper (US-006)
+  theme.js        dark-theme class toggle (US-003)
+  cover-art.js    beatmap cover backgrounds (US-010)
+  scores.js       score-row detection + "IF FC" labels (US-007)
+  profile.js      player-card button (US-009) + corner button
+  medals.js       medal visibility toggles (US-011)
+  player-card.js  canvas PNG export (US-009)
+  content.js      orchestrator / entry point (US-001)
+styles/theme.css  all dark-theme + feature-UI CSS
+lib/rosu-pp/      vendored, patched rosu-pp-js + its MIT license
+icons/            toolbar icons
+```
+
+## Non-goals (this phase)
+
+Firefox/Safari/Edge-specific builds, a backend, real-money features,
+background API polling, and localization are explicitly out of scope for
+this MVP — see the PRD for the full list.

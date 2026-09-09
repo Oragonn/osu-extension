@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>osu! Enhancer</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="popup__header">
+    <span class="popup__logo">osu!</span>
+    <span class="popup__title">Enhancer</span>
+  </header>
+
+  <main class="popup__list">
+    <label class="toggle">
+      <span>Dark theme</span>
+      <input type="checkbox" data-toggle="darkTheme" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
+      <span>PP if FC labels</span>
+      <input type="checkbox" data-toggle="ppIfFc" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
+      <span>Beatmap cover art</span>
+      <input type="checkbox" data-toggle="coverArt" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
+      <span>Downloadable player card</span>
+      <input type="checkbox" data-toggle="playerCard" />
+      <span class="toggle__switch"></span>
+    </label>
+  </main>
+
+  <footer class="popup__footer">
+    Changes apply instantly — no refresh needed.<br />
+    Medal toggles live as buttons on the Medals page. A ⚙ settings button
+    also appears in osu!'s own nav bar next to search.
+  </footer>
+
+  <script src="../src/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,567 @@
+/* ==========================================================================
+   osu! Enhancer — theme.css
+
+   Site-wide dark styling itself lives in styles/izuki-theme.css (a vendored,
+   personal-use copy of -Izuki-'s osu! redesign userstyle — see README
+   Credits), loaded/unloaded as a <link> by src/theme.js when the toggle
+   flips. This file only holds the couple of small `html.osu-enhancer-dark`
+   tweaks that file doesn't cover, plus all of the extension's own injected
+   UI (IF-FC label, cover art, player card button, PP potential, medal
+   controls, settings panel) — those aren't gated by the theme toggle since
+   they have their own independent toggles handled in JS.
+   ========================================================================== */
+
+html.osu-enhancer-dark {
+  color-scheme: dark;
+}
+
+/* .beatmap-scoreboard-top (the list of score cards) is a plain flex
+   container in the vendored theme, and a flex item with no explicit width
+   sizes to its own content instead of stretching to fill its row — so
+   each .beatmap-score-top card sits narrower than the card list itself,
+   leaving a dead gap on the right. Every child of .beatmap-score-top
+   already assumes full card width (.beatmap-score-top__section is
+   `width: 100%` relative to it), so the card itself just needs the same
+   to actually reach that width. */
+.beatmap-score-top {
+  width: 100% !important;
+}
+
+/* .beatmap-score-top__section is flex-row (avatar block left, stats block
+   right) by default in the vendored theme, and only switches to a stacked
+   flex-column (avatar centered on top, all stats as one full-width bar
+   below) under its own `@media (max-width: 899px)` rule further down. At
+   the row layout, the stats block only gets the leftover width next to
+   the avatar column (~660px), which isn't enough room for all ten stat
+   groups on one line, so they wrap into two ragged rows instead of the
+   single bar this card is meant to show. Extending that same column
+   layout up to desktop widths gives the stats block the full card width
+   instead, which is what actually fits everything on one line — this is
+   the vendored theme's own narrow-screen rule, just no longer capped at
+   899px. `.beatmap-score-top__wrapping-container--right` is already
+   `width: 100%`, and the section's own `align-items: center` (set
+   unconditionally, not just at narrow widths) is what centers the avatar
+   block once it's stacked above instead of beside the stats.
+
+   With the stats block now given the full card width instead of a
+   leftover sliver, izuki's own `justify-content: flex-end` on
+   `.beatmap-score-top__wrapping-container--right` (meant for the old
+   narrow layout, where there's barely any slack to push around) bunches
+   all three stat groups against the right edge instead of starting from
+   the left like the original bar. `gap: 0` (the visible spacing between
+   groups then comes entirely from the existing `margin-right: 10px` on
+   each `.beatmap-score-top__stat`, same as between individual stats
+   within a group) keeps spacing uniform, and `justify-content: center`
+   centers the whole bar horizontally — matching the avatar block
+   centered above it — instead of pinning it to either edge.
+
+   izuki's `align-items: flex-start` top-aligns the stat groups against
+   each other, so anything with a different height than the header+value
+   text (the mod icons in the MODS column, in particular) sits flush with
+   the top of the row instead of sharing a middle baseline with the rest
+   — `center` gives the whole bar a level, evenly-aligned bottom edge. */
+@media (min-width: 900px) {
+  .beatmap-score-top__section {
+    flex-direction: column !important;
+  }
+
+  .beatmap-score-top__wrapping-container--right {
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+}
+
+/* Your own score's card has an extra "Pin" stat that other players' cards
+   don't — that's what actually misaligns everything after it (Total Score,
+   Accuracy, ...) relative to a card without one. Pulling it out of the flex
+   row entirely as a small absolute corner button means every card's real
+   stats always land in the same spot, Pin or not. `.beatmap-score-top` is
+   already `position: relative` (vendored rule), so this anchors correctly.
+
+   `top` used to be -14px to dodge the old side-by-side layout's "Mods"
+   column, which shared the same top-right corner of .section. Now that
+   the stats bar (Mods included) lives in its own row at the bottom of
+   the stacked layout above, the top-right corner is empty, so Pin can
+   sit inside the card's own padding instead of floating above it. */
+.beatmap-score-top__stat:has(.btn-osu-big) {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+}
+
+.beatmap-score-top__stat:has(.btn-osu-big) .beatmap-score-top__stat-header {
+  display: none !important;
+}
+
+.beatmap-score-top__stat:has(.btn-osu-big) .btn-osu-big {
+  padding: 2px 10px !important;
+  font-size: 11px !important;
+  min-width: 0 !important;
+}
+
+/* Score rows 20% taller, per request — height only, nothing else scaled. */
+.play-detail {
+  min-height: 72px !important;
+}
+
+@media (min-width: 900px) {
+  .play-detail {
+    min-height: 60px !important;
+  }
+}
+
+/* ---------- Selected search-filter options (beatmapsets search page) ---------- */
+
+/* The vendored theme's .beatmapsets-search-filter__item--active only bumps
+   font-weight — its --colour custom property is set to the exact same
+   #ffffffcc as an unselected item, so a selected filter (e.g. "Ranked",
+   "osu!", a selected genre) looks nearly identical to every unselected one
+   next to it. !important is needed because :hover/:focus/:active on the
+   base .beatmapsets-search-filter__item selector are two-class-equivalent
+   compound selectors in the vendored file and would otherwise outrank this
+   single modifier class. */
+html.osu-enhancer-dark .beatmapsets-search-filter__item--active,
+html.osu-enhancer-dark .beatmapsets-search-filter__item--active:hover,
+html.osu-enhancer-dark .beatmapsets-search-filter__item--active:focus,
+html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
+  color: #ffce54 !important;
+}
+
+/* ==========================================================================
+   Feature UI injected by the extension.
+   ========================================================================== */
+
+/* ---------- Star rating, next to the time ---------- */
+
+.osu-enhancer-star-rating {
+  --osu-enhancer-star-color: #4290fb;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  background: var(--osu-enhancer-star-color);
+}
+
+/* ---------- Row position number ("#1", "#2", ...) ---------- */
+
+.osu-enhancer-rank-number {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-right: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #cfcfe0;
+}
+
+/* ---------- "IF FC ###pp" label (US-007) ---------- */
+
+.osu-enhancer-if-fc {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 3;
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
+  border-radius: 999px;
+  background: rgba(255, 102, 171, 0.9);
+  color: #1a1a24;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------- pp color tiers ---------- */
+
+/* Three different things can sit in .play-detail__pp, and they used to be
+   too close in visual weight to tell apart at a glance:
+   - counted pp (this score is the map's personal best) — native pink,
+     untouched, the "real" tier.
+   - real pp that doesn't count (osu-web's own .pp-value--non-preserved,
+     "Only personal best scores award pp") — native styling only dims it to
+     0.7 opacity, still the same pink, easy to misread as the real thing.
+     Recoloring it yellow on top of that opacity (rather than fighting it)
+     makes it its own middle tier: real number, secondary status.
+   - our own estimate on a beatmap that doesn't award pp at all — was also
+     yellow, which put it visually level with "real pp, doesn't count"
+     instead of clearly below it. Gray reads as "not an official number"
+     without competing with either pink or yellow. */
+.pp-value--non-preserved {
+  color: #ffce54;
+}
+
+/* osu-web shows "-" or a heart icon in .play-detail__pp for scores whose
+   beatmap doesn't award real pp (loved/graveyard/pending/WIP/qualified) —
+   this is appended alongside that placeholder, not replacing it. */
+.osu-enhancer-unranked-pp {
+  margin-left: 4px;
+  color: #cfcfe0;
+  font-weight: 700;
+}
+
+/* Hides osu-web's own "-"/heart-icon placeholder once our estimate is
+   present, rather than removing that node from the DOM (it carries a qTip
+   tooltip binding via data-hasqtip — hiding it with CSS leaves that intact
+   instead of risking a dangling tooltip reference). */
+.play-detail__pp:has(> .osu-enhancer-unranked-pp) > span:not(.osu-enhancer-unranked-pp) {
+  display: none;
+}
+
+/* ---------- Accuracy/combo/hit-count block (bottom row) ---------- */
+
+/* .play-detail__score-detail already sits directly between the mods and the
+   pp value in the bottom row's flex order (see selectors.js), so its native
+   content (a small rank icon, already hidden at this width, plus a bare
+   accuracy percentage) is swapped for our block instead of adding a new
+   flex item — that would need its own `order` to land in the same spot.
+   `flex: 1 1 auto` lets it claim any slack the row has instead of staying
+   pinned to the old, much narrower accuracy text's width. */
+.play-detail__score-detail:has(> .osu-enhancer-stat-block) {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.play-detail__score-detail:has(> .osu-enhancer-stat-block) > .play-detail__icon--extra,
+.play-detail__score-detail:has(> .osu-enhancer-stat-block) > .play-detail__score-detail-top-right {
+  display: none;
+}
+
+/* One frosted box wrapping both lines, rather than each line boxed
+   separately — reads as a single grouped readout. */
+.osu-enhancer-stat-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.osu-enhancer-stat-line1,
+.osu-enhancer-stat-line2 {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.osu-enhancer-stat-line1 {
+  font-size: 15px;
+  color: #e4e4ef;
+}
+
+.osu-enhancer-stat-acc {
+  color: #ffce54;
+}
+
+/* The beatmap's own max combo is always shown in the same pink as pp
+   (osu-web's own .pp-value color) — a fixed reference point. The combo the
+   score actually reached only turns that same pink via --fc below, when
+   it's a full combo (so the two numbers match in color exactly when they'd
+   also match in value). */
+.osu-enhancer-stat-combo-max {
+  color: #ff66ab;
+}
+
+.osu-enhancer-stat-combo--fc {
+  color: #ff66ab;
+}
+
+.osu-enhancer-stat-line2 {
+  font-size: 13px;
+}
+
+/* A "/" between each judgement count (not before the first) instead of raw
+   flex gap, with even spacing on both sides of it — going through CSS
+   rather than baking separators into scores.js's markup. */
+.osu-enhancer-judgement + .osu-enhancer-judgement {
+  margin-left: 7px;
+}
+
+.osu-enhancer-judgement + .osu-enhancer-judgement::before {
+  content: "/";
+  margin-right: 7px;
+  color: #8a8a9a;
+}
+
+/* 300/100/50 reuse the extension's own star-rating gradient stops (see
+   STAR_COLOR_STOPS in scores.js) rather than inventing a separate palette;
+   miss reuses the same red as the unranked-pp estimate. */
+.osu-enhancer-judgement--300 {
+  color: #4fc0ff;
+}
+
+.osu-enhancer-judgement--100 {
+  color: #7cff4f;
+}
+
+.osu-enhancer-judgement--50 {
+  color: #f6f05c;
+}
+
+.osu-enhancer-judgement--miss {
+  color: #ff4d4d;
+}
+
+/* ---------- Beatmap cover-art score rows (US-010) ---------- */
+
+/* Keyed off an attribute (set by cover-art.js) rather than a class: osu-web's
+   own React re-renders a row's whole `className` from scratch on things as
+   small as opening its "..." menu, silently erasing any class added here
+   from the outside (confirmed live — a click on `.popup-menu` turned "play-
+   detail play-detail--highlightable osu-enhancer-cover-row" into just
+   "play-detail play-detail--active", cover gone). A plain attribute survives
+   that same re-render untouched.
+
+   Painted on a ::before instead of the row's own background so a pinned
+   row's drag handle can be excluded from it (see below) — .play-detail is
+   already `position: relative` natively, so this anchors to it with no
+   extra markup. Its two known inner panels render their own opaque
+   background on top of the row, so they're punched transparent below to
+   let this show through. */
+.play-detail[data-osu-enhancer-cover] {
+  position: relative;
+}
+
+.play-detail[data-osu-enhancer-cover]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Smaller on the left than the row's own (larger) native radius on the
+     right — the default 10px uniform read as too round on the left; the
+     right corner already looks the way it should, driven by the pp
+     backdrop's own smaller 6px corner sitting right at that edge (not this
+     element's radius at all there), so matching that same small amount on
+     the left instead of the full native radius is the fix, not a ring or
+     an equal-uniform radius (both tried first and wrong). */
+  border-radius: 6px var(--border-radius, 10px) var(--border-radius, 10px) 6px;
+  background-image: linear-gradient(
+      90deg,
+      rgba(8, 8, 14, 0.93) 0%,
+      rgba(8, 8, 14, 0.6) 55%,
+      rgba(8, 8, 14, 0.25) 100%
+    ),
+    var(--osu-enhancer-cover-url);
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+/* A pinned score's `.play-detail` is 20px *wider* than every other row,
+   growing purely on the left — osu-web reserves room there for its own
+   `.sortable-handle--score-pin` drag handle by giving `.play-detail--pin-
+   sortable` a `margin-left: -20px`, and a block with `width: auto` absorbs
+   a negative margin as extra box width rather than shifting the existing
+   box (confirmed by measuring both against a Best Performance row: same
+   right edge, left edge exactly 20px further out). Left unhandled, the
+   ::before above covers that full extra width too, so the cover art reads
+   as a wider, further-left card than every other row's, with the drag
+   handle floating in its gradient. Insetting the left edge by that same
+   20px for pin-sortable rows only lines this card's left edge back up
+   exactly with a non-pinned row's (verified: 222.5px + 20px === a sibling
+   Best Performance row's own 242.5px left edge), leaving the handle over
+   plain (transparent) row background — same as it looks on a pinned row
+   with no cover art at all. */
+.play-detail[data-osu-enhancer-cover].play-detail--pin-sortable::before {
+  left: var(--pin-sortable-handle-width, 20px);
+}
+
+.play-detail[data-osu-enhancer-cover] .play-detail__group--top,
+.play-detail[data-osu-enhancer-cover] .play-detail__score-detail,
+.play-detail[data-osu-enhancer-cover] .play-detail__mods,
+.play-detail[data-osu-enhancer-cover] .play-detail__score-detail--mods {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* The pp figure itself is native osu-web text, not ours, and its color
+   isn't always the usual pink — supporters can set a custom profile colour
+   that recolors it site-wide, and on a dark/cool custom color it can lose
+   almost all contrast against the cover art specifically (reported live:
+   a blue pp value over a blue-toned cover was essentially unreadable).
+   It also sits at the right edge, exactly where the gradient above is at
+   its least opaque (25%), so more of the raw image shows through there
+   than anywhere else in the row. Rather than fight an arbitrary, per-user
+   text color, giving it its own frosted backdrop — the same treatment the
+   stat block already gets on the other side of the row — guarantees
+   contrast regardless of what color the text happens to be. */
+.play-detail[data-osu-enhancer-cover] .play-detail__pp {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  /* Square on the left (sitting mid-row, not against a card edge), rounded
+     on the right to flow into the card's own corner there. */
+  border-radius: 0 6px 6px 0;
+  padding: 4px 10px;
+}
+
+
+/* ---------- Player card download button (US-009) ---------- */
+
+.osu-enhancer-playercard-btn {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #ffce54;
+  background: transparent;
+  color: #ffce54;
+  cursor: pointer;
+}
+
+.osu-enhancer-playercard-btn:hover {
+  background: rgba(255, 206, 84, 0.14);
+}
+
+/* ---------- Profile-page corner button (placeholder, no behavior) ---------- */
+
+.osu-enhancer-noop-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #4a4a5e;
+  background: #1b1b24;
+  color: #cfcfe0;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* ---------- Medal visibility + controls (US-011) ---------- */
+
+.osu-enhancer-medal-hidden {
+  display: none !important;
+}
+
+.osu-enhancer-medal-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.osu-enhancer-medal-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #4a4a5e;
+  background: #1b1b24;
+  color: #cfcfe0;
+  cursor: pointer;
+}
+
+.osu-enhancer-medal-btn--active {
+  border-color: #ff66ab;
+  background: rgba(255, 102, 171, 0.16);
+  color: #ff8fc4;
+}
+
+/* ---------- In-page settings button (nav bar, between help and search) ---------- */
+
+.osu-enhancer-nav-col {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.osu-enhancer-nav-btn {
+  background: none;
+  border: none;
+  color: #e4e4ef;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.osu-enhancer-nav-btn:hover {
+  color: #ff8fc4;
+}
+
+.osu-enhancer-settings-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1000;
+  width: 240px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #1e1e29;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.osu-enhancer-settings-panel__title {
+  font-weight: 700;
+  color: #ff8fc4;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid #33334a;
+  margin-bottom: 4px;
+}
+
+.osu-enhancer-settings-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 13px;
+  color: #e4e4ef;
+  cursor: pointer;
+}
+
+.osu-enhancer-settings-panel__row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.osu-enhancer-settings-panel__switch {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  background: #33334a;
+  flex-shrink: 0;
+}
+
+.osu-enhancer-settings-panel__switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #cfcfe0;
+}
+
+.osu-enhancer-settings-panel__row input:checked + .osu-enhancer-settings-panel__switch {
+  background: #ff66ab;
+}
+
+.osu-enhancer-settings-panel__row input:checked + .osu-enhancer-settings-panel__switch::after {
+  transform: translateX(14px);
+  background: #fff;
+}

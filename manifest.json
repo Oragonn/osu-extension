@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "osu! Enhancer — Dark Theme + PP Stats",
+  "version": "0.1.0",
+  "description": "Site-wide dark theme for osu.ppy.sh plus client-side PP-if-FC, PP potential, cover art, medal toggles, and a downloadable player card.",
+  "homepage_url": "https://github.com/",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "osu! Enhancer"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["*://osu.ppy.sh/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://osu.ppy.sh/*"],
+      "css": ["styles/theme.css"],
+      "js": [
+        "lib/rosu-pp/rosu_pp.js",
+        "src/selectors.js",
+        "src/storage.js",
+        "src/pp-calc.js",
+        "src/theme.js",
+        "src/mode-filter.js",
+        "src/cover-art.js",
+        "src/scores.js",
+        "src/profile.js",
+        "src/medals.js",
+        "src/player-card.js",
+        "src/settings-panel.js",
+        "src/content.js"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/rosu-pp/rosu_pp_js_bg.wasm", "styles/izuki-theme.css"],
+      "matches": ["*://osu.ppy.sh/*"]
+    }
+  ]
+}
