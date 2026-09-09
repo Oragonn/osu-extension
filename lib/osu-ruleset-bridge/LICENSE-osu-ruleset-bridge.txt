@@ -1,0 +1,37 @@
+This directory's compiled output (_framework/) is built from the official,
+unmodified NuGet packages ppy.osu.Game.Rulesets.Osu, ppy.osu.Game, and
+ppy.osu.Framework, published by ppy Pty Ltd under the MIT Licence below. Note
+that this covers the code only -- it does NOT cover usage of the "osu!" or
+"ppy" branding/names, which remain protected by trademark law per ppy's own
+licensing notice (see github.com/ppy/osu-resources).
+
+The C# bridge source that produces this build (engine-bridge/OsuRulesetBridge/
+Program.cs, also part of this project) is original code written for this
+extension -- it is not adapted from any third-party browser-extension project.
+Two small pieces were adapted from ppy's own official, separately MIT-licensed
+`osu-tools` CLI (github.com/ppy/osu-tools): the beatmap-loading WorkingBeatmap
+pattern (from ProcessorWorkingBeatmap.cs) and the accuracy-from-statistics
+formula (from Simulate/OsuSimulateCommand.cs's GetAccuracy). Both are credited
+in code comments at their point of use.
+
+---
+
+Copyright (c) 2025 ppy Pty Ltd <contact@ppy.sh>.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

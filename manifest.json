@@ -31,6 +31,8 @@
         "lib/rosu-pp/rosu_pp.js",
         "src/selectors.js",
         "src/storage.js",
+        "src/engines/rosu-engine.js",
+        "src/engines/official-engine.js",
         "src/pp-calc.js",
         "src/theme.js",
         "src/mode-filter.js",
@@ -48,7 +50,13 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["lib/rosu-pp/rosu_pp_js_bg.wasm", "styles/izuki-theme.css"],
+      "resources": [
+        "lib/rosu-pp/rosu_pp_js_bg.wasm",
+        "styles/izuki-theme.css",
+        "pages/official-engine-host.html",
+        "pages/official-engine-host.js",
+        "lib/osu-ruleset-bridge/_framework/*"
+      ],
       "matches": ["*://osu.ppy.sh/*"]
     }
   ]

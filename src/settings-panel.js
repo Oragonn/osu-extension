@@ -49,6 +49,32 @@
       panel.appendChild(row);
     });
 
+    // Not a boolean toggle (like medalFilter, this gets bespoke UI rather
+    // than being forced into TOGGLE_DEFS's checkbox loop above).
+    const engineRow = document.createElement('label');
+    engineRow.className = 'osu-enhancer-settings-panel__row osu-enhancer-settings-panel__row--select';
+
+    const engineText = document.createElement('span');
+    engineText.textContent = 'PP calculation engine';
+
+    const engineSelect = document.createElement('select');
+    engineSelect.className = 'osu-enhancer-settings-panel__select';
+    [
+      ['rosu', 'rosu-pp (bundled)'],
+      ['official', 'Official game code (ppy)'],
+    ].forEach(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      engineSelect.appendChild(option);
+    });
+    engineSelect.value = toggles.ppEngine || 'rosu';
+    engineSelect.addEventListener('change', () => OsuEnhancer.storage.setToggle('ppEngine', engineSelect.value));
+
+    engineRow.appendChild(engineText);
+    engineRow.appendChild(engineSelect);
+    panel.appendChild(engineRow);
+
     return panel;
   }
 

@@ -24,6 +24,16 @@ service, no network calls beyond osu.ppy.sh's own `/osu/<id>` beatmap file
 endpoint (used by the game client itself) and the extension's own bundled
 `.wasm`.
 
+> **Experimental (not yet functional):** a "PP calculation engine" setting
+> exists (rosu-pp / "Official game code") backed by a second, clean-room
+> engine under `engine-bridge/` and `src/engines/official-engine.js`, meant to
+> track osu!'s real pp algorithm more closely than the vendored `rosu-pp-js`
+> can. It currently fails at runtime due to an unresolved `osu.Framework`
+> browser-wasm incompatibility — see
+> [`engine-bridge/FINDINGS.md`](engine-bridge/FINDINGS.md) for the full
+> writeup. Leave the engine setting on the default (`rosu-pp`) until that's
+> resolved.
+
 ## Install (unpacked, for development/testing)
 
 1. Open `chrome://extensions` in Chrome.
@@ -54,8 +64,10 @@ and `lib/` is plain JS/CSS/HTML/WASM checked in as-is.
   vendored full theme, see Credits below) and toggles `html.osu-enhancer-dark`
   for the extension's own small first-party tweaks, so turning the theme off
   is instant with no reload.
-- `src/pp-calc.js` wraps the vendored `rosu-pp-js` WASM build to compute PP
-  from a beatmap's own `.osu` file plus a score's accuracy/combo/mods.
+- `src/pp-calc.js` is a thin dispatcher over two engine modules
+  (`src/engines/rosu-engine.js`, the vendored `rosu-pp-js` wrapper; and
+  `src/engines/official-engine.js`, the experimental official-ruleset engine
+  — see the note above), selected by the `ppEngine` storage toggle.
 - `src/settings-panel.js` injects a ⚙ button into osu!'s own nav bar
   (between "help" and the search icon) that opens a small toggle panel —
   the primary way to control the extension day-to-day. The toolbar popup
@@ -113,16 +125,29 @@ community projects, per the PRD's licensing requirements:
   globals and a `fetch()`-based async WebAssembly loader, so it can run
   inside a content script. No calculation logic was changed — see the
   header comment in that file for the exact patch.
+- **`ppy.osu.Game.Rulesets.Osu`/`ppy.osu.Game`/`ppy.osu.Framework`** by ppy
+  Pty Ltd — MIT licensed (see
+  `lib/osu-ruleset-bridge/LICENSE-osu-ruleset-bridge.txt`). Used by the
+  experimental official-engine bridge under `engine-bridge/`, compiled to
+  WebAssembly by this project's own clean-room code — not currently
+  functional, see `engine-bridge/FINDINGS.md`. The architectural idea (compile
+  the official ruleset to WASM instead of a third-party reimplementation) was
+  observed in `winterbirdhere/osu-pp-extension` (AGPL-3.0); no code from that
+  project is used here.
 
 ## Project structure
 
 ```
 manifest.json
 popup/            toggle UI (US-002)
+pages/            official-engine-host.{html,js} -- hidden iframe WASM host (experimental)
 src/
   selectors.js    centralized DOM selectors
   storage.js      chrome.storage.local wrapper + toggle defaults
-  pp-calc.js      rosu-pp-js wrapper (US-006)
+  pp-calc.js      thin dispatcher over src/engines/*
+  engines/
+    rosu-engine.js      rosu-pp-js wrapper (US-006)
+    official-engine.js  experimental official-ruleset engine (see engine-bridge/FINDINGS.md)
   theme.js        dark-theme class toggle (US-003)
   cover-art.js    beatmap cover backgrounds (US-010)
   scores.js       score-row detection + "IF FC" labels (US-007)
@@ -131,7 +156,9 @@ src/
   player-card.js  canvas PNG export (US-009)
   content.js      orchestrator / entry point (US-001)
 styles/theme.css  all dark-theme + feature-UI CSS
-lib/rosu-pp/      vendored, patched rosu-pp-js + its MIT license
+lib/rosu-pp/            vendored, patched rosu-pp-js + its MIT license
+lib/osu-ruleset-bridge/ compiled official-engine WASM output (experimental, not yet functional)
+engine-bridge/          C# source for the official-engine WASM bridge + FINDINGS.md
 icons/            toolbar icons
 ```
 

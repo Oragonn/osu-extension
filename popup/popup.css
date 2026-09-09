@@ -91,6 +91,24 @@ body {
   background: #fff;
 }
 
+.select-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0 4px;
+}
+
+.select-row select {
+  background: #26263a;
+  color: #f2f2f5;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .popup__footer {
   padding: 10px 16px 14px;
   color: #7c7c92;

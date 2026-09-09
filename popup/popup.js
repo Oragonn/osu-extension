@@ -11,4 +11,13 @@
       setToggle(input.dataset.toggle, input.checked);
     });
   });
+
+  // Non-boolean settings (a <select>, unlike the checkboxes above) get their
+  // own small binder rather than being squeezed into the [data-toggle] loop.
+  document.querySelectorAll('[data-engine-toggle]').forEach((select) => {
+    select.value = toggles[select.dataset.engineToggle] || select.value;
+    select.addEventListener('change', () => {
+      setToggle(select.dataset.engineToggle, select.value);
+    });
+  });
 })();

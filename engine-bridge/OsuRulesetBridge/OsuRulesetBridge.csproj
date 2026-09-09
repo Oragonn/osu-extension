@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <WasmBuildNative>false</WasmBuildNative>
+    <WasmLinkIcalls>false</WasmLinkIcalls>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      ppy.osu.Game.Resources (CC-BY-NC 4.0) bundles its fonts/textures/audio as
+      EmbeddedResource inside the compiled DLL itself, not as loose files, so
+      excluding it entirely (compile, runtime and build) is the only mechanism
+      that actually keeps that DLL (and everything embedded in it) out of our
+      publish output. We never call any osu.Game code path that would need it
+      (no skin, no audio, no rendering; only beatmap decoding plus
+      difficulty/performance calculation), so nothing here needs it at runtime.
+    -->
+    <PackageReference Include="ppy.osu.Game.Resources" Version="2026.710.0" ExcludeAssets="all" PrivateAssets="all" />
+
+    <!--
+      Realm/SQLite/Sentry are transitive dependencies of ppy.osu.Game (needed
+      because BeatmapInfo/ScoreInfo are Realm object subclasses), but none of
+      them have a browser-wasm native binary and we never attach these objects
+      to a live Realm database (confirmed via a standalone console spike before
+      this project was created), so only their native/runtime assets are
+      excluded, keeping the managed types available at compile time.
+    -->
+    <PackageReference Include="Realm" Version="20.1.0" ExcludeAssets="native" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.9" ExcludeAssets="native" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" ExcludeAssets="native" />
+    <PackageReference Include="Sentry" Version="6.6.0" ExcludeAssets="native" />
+
+    <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.730.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      osu.Framework.RuntimeInfo's static constructor unconditionally calls
+      DebugUtils.IsNUnitRunning(), a reflection probe for
+      NUnit.Framework.Internal.TestExecutionContext+AdhocContext.AdhocTestMethod
+      used purely as an environment-detection check. The trimmer removes that
+      method since nothing else references it directly, which throws at
+      runtime and cascades into a TypeInitializationException on Logger (and
+      therefore on every beatmap decode, since LegacyBeatmapDecoder touches
+      Logger). Rooting the whole assembly (only ~0.5MB) is simpler and more
+      future-proof than hand-listing the exact reflected member.
+    -->
+    <TrimmerRootAssembly Include="nunit.framework" />
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,22 @@
+<linker>
+  <assembly fullname="AutoMapper" preserve="all" />
+  <assembly fullname="nunit.framework" preserve="all" />
+  <assembly fullname="osu.Game">
+    <type fullname="osu.Game.Database.RealmObjectExtensions" preserve="all" />
+    <type fullname="osu.Game.Beatmaps.BeatmapDifficulty" preserve="all" />
+    <type fullname="osu.Game.Beatmaps.BeatmapInfo" preserve="all" />
+    <type fullname="osu.Game.Beatmaps.BeatmapMetadata" preserve="all" />
+    <type fullname="osu.Game.Beatmaps.BeatmapSetInfo" preserve="all" />
+    <type fullname="osu.Game.Beatmaps.BeatmapUserSettings" preserve="all" />
+    <type fullname="osu.Game.Collections.BeatmapCollection" preserve="all" />
+    <type fullname="osu.Game.Input.Bindings.RealmKeyBinding" preserve="all" />
+    <type fullname="osu.Game.Models.RealmFile" preserve="all" />
+    <type fullname="osu.Game.Models.RealmNamedFileUsage" preserve="all" />
+    <type fullname="osu.Game.Models.RealmUser" preserve="all" />
+    <type fullname="osu.Game.Rulesets.RulesetInfo" preserve="all" />
+    <type fullname="osu.Game.Scoring.ScoreInfo" preserve="all" />
+    <type fullname="osu.Game.Skinning.SkinInfo" preserve="all" />
+  </assembly>
+  <assembly fullname="System.Linq" preserve="all" />
+  <assembly fullname="System.Linq.Expressions" preserve="all" />
+</linker>
