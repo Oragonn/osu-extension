@@ -125,7 +125,7 @@
       } else {
         profile.removePlayerCardButton();
       }
-    } else if (key === 'ppIfFc' || key === 'coverArt') {
+    } else if (key === 'ppIfFc' || key === 'coverArt' || key === 'ppEngine') {
       scores.clearAll();
       runScoreFeatures(currentToggles);
     }

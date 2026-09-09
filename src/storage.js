@@ -14,6 +14,7 @@
     coverArt: true,
     playerCard: true,
     medalFilter: 'all', // 'all' | 'completed' | 'missing'
+    ppEngine: 'rosu', // 'rosu' | 'official'
   };
 
   const LISTENERS = [];

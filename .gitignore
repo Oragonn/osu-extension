@@ -1,1 +1,5 @@
 *.webp
+.claude/
+engine-bridge/**/bin/
+engine-bridge/**/obj/
+engine-bridge/**/publish.log

@@ -565,3 +565,20 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   transform: translateX(14px);
   background: #fff;
 }
+
+.osu-enhancer-settings-panel__row--select {
+  cursor: default;
+  border-top: 1px solid #33334a;
+  margin-top: 4px;
+  padding-top: 11px;
+}
+
+.osu-enhancer-settings-panel__select {
+  background: #33334a;
+  color: #e4e4ef;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
