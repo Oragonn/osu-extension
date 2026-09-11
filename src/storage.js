@@ -13,6 +13,10 @@
     ppIfFc: true,
     coverArt: true,
     playerCard: true,
+    pickerDiffNames: true, // difficulty names + star rating on the beatmapset picker tray
+    listingMaxSr: true, // max star rating chip on beatmapset listing/search cards
+    scoreAgeHighlight: true, // score age period highlight on profile Best Performance
+    profileAccentColor: false, // purple site accent (nav underline, hover highlights, ...) on profile pages
     medalFilter: 'all', // 'all' | 'completed' | 'missing'
     ppEngine: 'rosu', // 'rosu' | 'official'
     osuApiClientId: '', // for the "DT only" leaderboard lookup (official osu! API v2)

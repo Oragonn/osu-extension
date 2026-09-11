@@ -134,8 +134,18 @@
           'Estimated — this beatmap isn’t ranked, so it doesn’t award official pp. ' +
           'May also run behind osu!’s current pp formula until the bundled rosu-pp build is updated for the latest rework.';
         row.appendChild(
-          createStat('pp', `<span class="osu-enhancer-score-detail-pp" title="${title}">${Math.round(estimatedPp)}</span>`)
+          createStat('pp', `<span class="osu-enhancer-score-detail-pp" title="${title}">${estimatedPp.toFixed(2)}</span>`)
         );
+      }
+    } else {
+      // A real awarded score: osu-web renders its own pp figure natively
+      // here too (same `.pp-value` leading-text-node structure as the
+      // profile score rows — see scores.js's renderRealPp), rounded to a
+      // whole pp by osu-web itself.
+      const valueEl = row.querySelector('.pp-value');
+      const textNode = valueEl && valueEl.firstChild;
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        textNode.textContent = score.pp.toFixed(2);
       }
     }
 
@@ -146,7 +156,7 @@
         isLegacy,
       });
       if (ppIfFc != null) {
-        row.appendChild(createStat('pp if fc', `<span class="osu-enhancer-score-detail-fc">${Math.round(ppIfFc)}</span>`));
+        row.appendChild(createStat('pp if fc', `<span class="osu-enhancer-score-detail-fc">${ppIfFc.toFixed(2)}</span>`));
       }
     }
   }

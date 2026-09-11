@@ -178,21 +178,33 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   color: #cfcfe0;
 }
 
-/* ---------- "IF FC ###pp" label (US-007) ---------- */
+/* ---------- "if FC ###pp" annotation (US-007) ---------- */
 
+/* Stacked directly under the real pp value inside .play-detail__pp itself
+   (see scores.js's renderIfFcLabel for why) — :has() scopes this so only
+   rows that actually get the annotation have their pp container's layout
+   touched, same technique the unranked-pp rule right below already uses
+   on this identical element. */
+.play-detail__pp:has(> .osu-enhancer-if-fc) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+/* Fixed neutral gray, not hsl(var(--hsl-h1)) — .pp-value (the real pp
+   right above this) already uses that same accent variable, so matching
+   it here made the two lines render in the exact same color (confirmed
+   live, including with the purple profile-accent override on), losing
+   the distinction between "what you actually got" and "the hypothetical
+   FC number." Same gray as .osu-enhancer-unranked-pp/-score-detail-pp
+   elsewhere in this file, for the same "not the real/primary number"
+   reason. */
 .osu-enhancer-if-fc {
-  position: absolute;
-  top: 4px;
-  right: 8px;
-  z-index: 3;
-  display: inline-block;
-  padding: 2px 8px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 1.6;
-  border-radius: 999px;
-  background: rgba(255, 102, 171, 0.9);
-  color: #1a1a24;
+  line-height: 1.3;
+  color: #cfcfe0;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -807,21 +819,304 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   font-size: 12px;
 }
 
+/* ---------- Beatmapset picker: difficulty names + star rating ---------- */
+
+/* Native tray is a fixed-width row of small circle icons only. Enabled,
+   each icon grows into a pill with its name + star rating beside it, still
+   wrapping onto as many rows as it needs — so the header box and the
+   picker itself both need to stop clamping to the native narrow width. */
+.beatmapset-header.osu-enhancer-picker-names-enabled .beatmapset-header__beatmap-picker-box {
+  width: auto;
+  max-width: none;
+}
+
+.beatmapset-header.osu-enhancer-picker-names-enabled .beatmapset-beatmap-picker {
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.beatmapset-header.osu-enhancer-picker-names-enabled .beatmapset-beatmap-picker__beatmap {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  width: auto !important;
+  height: auto !important;
+  padding: 6px 14px 6px 8px;
+  position: relative;
+  /* Native rule dims every icon to opacity 0.7 until hovered/selected
+     (osu-web's own .beatmapset-beatmap-picker__beatmap rule) — reasonable
+     for a small bare icon, but it washes out real text enough to read as
+     blurry once each item shows a name/rating instead. */
+  opacity: 1 !important;
+}
+
+/* osu-web's own hover/selected ring is a ::before sized to the anchor's
+   full box (see the native `.beatmapset-beatmap-picker__beatmap::before`
+   rule) — harmless at the native 38x38 icon size, but left at its default
+   z-index (auto, painted after the icon in source order) it drew right
+   over the icon once this pill grew wide enough for the ring to cover it.
+   A colored border/background of our own here to match it would just be a
+   second box competing with that native one instead — dropping it behind
+   the icon (and everything else in the pill) via z-index is the actual
+   fix, same as inix1257/osu_expertplus does for this exact pill layout
+   (see README Credits): the native ring still shows on hover/selection,
+   just underneath, so nothing of ours has to try to match its color. */
+.beatmapset-header.osu-enhancer-picker-names-enabled .beatmapset-beatmap-picker__beatmap::before {
+  z-index: 0;
+}
+
+.beatmapset-header.osu-enhancer-picker-names-enabled .beatmapset-beatmap-picker__beatmap > .beatmap-icon {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.osu-enhancer-picker-meta {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.2;
+  /* Same reason as the icon's z-index above — otherwise the native ring
+     (z-index 0, positioned) paints over this plain in-flow text instead of
+     under it. */
+  position: relative;
+  z-index: 1;
+  /* Lightens very dark diff colors (the near-black top of osu!'s own
+     extreme/ultimate range) into something readable as text against
+     osu-web's own dark page background. */
+  --osu-enhancer-diff-muted: color-mix(in srgb, var(--osu-enhancer-diff-src, #cfcfe0) 55%, #ffffff);
+}
+
+.beatmapset-header.osu-enhancer-picker-names-enabled .osu-enhancer-picker-meta {
+  display: flex;
+}
+
+.osu-enhancer-picker-version {
+  font-weight: 700;
+  /* osu-web sets the page root font-size to 10px (its own rem base for a
+     different scale), so a `rem` size here came out much smaller than it
+     looks — confirmed live (0.95rem was rendering at 9.5px). Fixed px
+     sizes below sidestep that entirely. */
+  font-size: 12px;
+  color: var(--osu-enhancer-diff-muted);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.osu-enhancer-picker-star {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--osu-enhancer-diff-muted);
+}
+
+/* ---------- Beatmapset listing cards: max star rating chip ---------- */
+
+/* A set with several modes renders one icon+dots(+our chip) group per
+   mode, all as siblings inside .beatmapset-panel__info-row--extra — native
+   CSS keeps that outer row `flex-wrap: nowrap` (fine with no chips added,
+   since the native content always fit), so once it runs out of width here
+   the wrap has to happen at the row level (whole groups move to their own
+   line) rather than inside a single group — wrapping inside a group
+   instead (tried first) split each group's own icon+dots from its chip,
+   landing every group's icon+dots on one line and every group's chip on
+   the next, since all the groups run out of room at the same point. */
+.beatmapset-panel__info-row--extra {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+/* --osu-enhancer-max-sr-src and the text color are both set directly in JS
+   (max-sr-chip.js's diffColor/diffTextColor, computed from the same
+   numeric rating this chip displays) rather than here — see that file's
+   header comment for why background specifically can't come from a
+   native dot's color on this page. The color below is only the fallback
+   for the rare tick where the chip exists but JS hasn't set it yet. */
+/* Kept as compact as still legible — verified live that even a much more
+   extreme shrink (no star, one decimal, 9px font, ~0 padding) doesn't get
+   a 4-mode set's four groups down to fitting the card's own width: their
+   native icon+dots content alone already uses nearly all of it before any
+   chip is added, so this is about not wasting the little slack that is
+   there for 2-3 mode sets, not about making 4-mode sets fit on one line
+   (they won't, and wrapping whole groups together, above, is the actual
+   fix for those — this only trims how much room each group needs). */
+.osu-enhancer-max-sr-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #000;
+  background: var(--osu-enhancer-max-sr-src, #cfcfe0);
+}
+
 /* ---------- Score detail page (/scores/<id>) pp stats ---------- */
 
 /* Appended as extra ".score-stats__stat" tiles alongside osu-web's own
    Accuracy/Max Combo/pp trio (see selectors.scoreDetailStatsRow) — that
    row is already `display: flex; flex-wrap: wrap` with each tile at
    `flex: 1 1 0%`, so extra tiles just flow into the same row/wrap onto a
-   second line at narrow widths, no layout rules needed here. Colors reuse
-   the same tiers as the profile score rows: gray for our own estimate
-   (not an official number), pink for a hypothetical (pp if this had been
-   a full combo) — matching .osu-enhancer-unranked-pp and the "IF FC" label
-   respectively. */
+   second line at narrow widths, no layout rules needed here. */
 .osu-enhancer-score-detail-pp {
   color: #cfcfe0;
 }
 
+/* Fixed purple, not hsl(var(--hsl-h1)) — tried that first, but --hsl-h1 on
+   this page isn't necessarily osu!'s default pink: a supporter can set
+   their own custom profile colour, and confirmed live it's *that* accent
+   (not this project's own profile-accent-color.js override, which doesn't
+   run on /scores/<id> at all) driving --hsl-h1 here, so it rendered as
+   whichever color the score's own player had picked (blue, in the case
+   that surfaced this) instead of purple. A fixed value sidesteps that
+   entirely. */
 .osu-enhancer-score-detail-fc {
-  color: #ff66ab;
+  color: rgb(140, 102, 255);
+}
+
+/* ---------- Best Performance: score age period highlight ---------- */
+
+.osu-enhancer-age-filter {
+  box-sizing: border-box;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 34rem;
+}
+
+.osu-enhancer-age-filter__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.osu-enhancer-age-filter__text {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* hsl(var(--hsl-h1)) rather than a fixed pink — osu-web's own site accent,
+   so this automatically follows profile-accent-color.js's override too
+   (confirmed live: without this, the purple toggle recolored the rest of
+   the page but left this feature's own pink behind). */
+.osu-enhancer-age-filter__period {
+  color: hsl(var(--hsl-h1));
+  font-weight: 700;
+}
+
+.osu-enhancer-age-filter__tail {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 400;
+}
+
+.osu-enhancer-age-filter__actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.osu-enhancer-age-filter__btn {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.osu-enhancer-age-filter__btn:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.osu-enhancer-age-filter__reverse--on {
+  border-color: hsla(var(--hsl-h1), 0.5);
+  background: hsla(var(--hsl-h1), 0.14);
+  color: hsl(var(--hsl-h1));
+}
+
+/* Bare <input type="range"> styling — needs the vendor-prefixed
+   pseudo-elements individually, there's no shorthand for this. */
+.osu-enhancer-age-filter__range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.osu-enhancer-age-filter__range::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.osu-enhancer-age-filter__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: hsl(var(--hsl-h1));
+  border: 2px solid rgba(255, 255, 255, 0.92);
+}
+
+.osu-enhancer-age-filter__range::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.osu-enhancer-age-filter__range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  background: hsl(var(--hsl-h1));
+}
+
+/* Best Performance is never pin-sortable (only Pinned Scores is — see
+   cover-art.js's own comment on that width quirk), so this can be a plain
+   inset:0 ring with no left-edge exception to worry about. */
+.play-detail.osu-enhancer-age-highlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.play-detail.osu-enhancer-age-highlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  border: 2px solid hsla(var(--hsl-h1), 0.9);
+  box-shadow: inset 0 0 14px hsla(var(--hsl-h1), 0.15);
+  background: hsla(var(--hsl-h1), 0.1);
+  pointer-events: none;
+  z-index: 1;
+  box-sizing: border-box;
 }

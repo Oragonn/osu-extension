@@ -19,6 +19,10 @@
     settingsPanel,
     modeFilter,
     leaderboardModFilter,
+    beatmapPicker,
+    maxSrChip,
+    scoreAgeHighlight,
+    profileAccentColor,
   } = window.OsuEnhancer;
 
   let currentToggles = null;
@@ -33,6 +37,10 @@
     scores.applyRankNumbers();
     modeFilter.applyDefaultMode();
     leaderboardModFilter.refresh();
+    beatmapPicker.apply(toggles.pickerDiffNames);
+    maxSrChip.apply(toggles.listingMaxSr);
+    scoreAgeHighlight.apply(toggles.scoreAgeHighlight);
+    profileAccentColor.apply(toggles.profileAccentColor);
 
     if (profile.isProfilePage() && toggles.playerCard) {
       profile.renderPlayerCardButton(() => playerCard.downloadPlayerCard());
@@ -143,6 +151,14 @@
       scores.clearAll();
       scoreDetail.clearAll();
       runScoreFeatures(currentToggles);
+    } else if (key === 'pickerDiffNames') {
+      beatmapPicker.apply(value);
+    } else if (key === 'listingMaxSr') {
+      maxSrChip.apply(value);
+    } else if (key === 'scoreAgeHighlight') {
+      scoreAgeHighlight.apply(value);
+    } else if (key === 'profileAccentColor') {
+      profileAccentColor.apply(value);
     }
   });
 

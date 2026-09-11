@@ -329,17 +329,22 @@
       `</span>`;
   }
 
+  // Appended inside .play-detail__pp itself, stacked directly under the
+  // real pp value (see theme.css's :has() rule) — previously an absolutely
+  // -positioned badge floating over the row's top-right corner instead,
+  // reported as unclear (not visually connected to the pp number it's
+  // about, and could land overlapping the title/mapper text depending on
+  // row width).
   function renderIfFcLabel(row, ppValue) {
-    // Appended to the row itself (not into .play-detail__pp's flex/absolute
-    // layout) and positioned as an overlay via CSS, so it can't distort
-    // osu!'s own row layout regardless of viewport width.
-    let label = row.querySelector(':scope > .osu-enhancer-if-fc');
+    const ppEl = row.querySelector(sel.scoreRowPp);
+    if (!ppEl) return;
+    let label = ppEl.querySelector(':scope > .osu-enhancer-if-fc');
     if (!label) {
       label = document.createElement('span');
       label.className = 'osu-enhancer-if-fc';
-      row.appendChild(label);
+      ppEl.appendChild(label);
     }
-    label.textContent = `IF FC ${Math.round(ppValue)}pp`;
+    label.textContent = `if FC ${ppValue.toFixed(2)}pp`;
   }
 
   // Unranked/loved/graveyard/pending/WIP scores get `score.pp === null` from
@@ -362,7 +367,22 @@
         'May also run behind osu!’s current pp formula until the bundled rosu-pp build is updated for the latest rework.';
       ppEl.appendChild(span);
     }
-    span.textContent = `${Math.round(ppValue)}pp`;
+    span.textContent = `${ppValue.toFixed(2)}pp`;
+  }
+
+  // For a real (preserved or not) awarded score, osu-web renders its own
+  // pp figure natively — `.play-detail__pp > .pp-value`, a leading text
+  // node (the number, rounded to a whole pp by osu-web itself) followed by
+  // a nested `.play-detail__pp-unit` span (the "pp" suffix). Only that
+  // leading text node is replaced, so the "pp" suffix (and .pp-value's own
+  // title tooltip/classes, including --non-preserved) stay exactly as
+  // osu-web rendered them.
+  function renderRealPp(row, ppValue) {
+    const valueEl = row.querySelector(`${sel.scoreRowPp} .pp-value`);
+    const textNode = valueEl && valueEl.firstChild;
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      textNode.textContent = ppValue.toFixed(2);
+    }
   }
 
   async function processRow(row, score, toggles) {
@@ -409,6 +429,8 @@
           isLegacy: score.legacy_score_id != null,
         });
         if (unrankedPp != null) renderUnrankedPp(row, unrankedPp);
+      } else {
+        renderRealPp(row, score.pp);
       }
 
       let ppIfFc = null;

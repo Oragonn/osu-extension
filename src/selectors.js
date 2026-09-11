@@ -75,6 +75,12 @@
     // Performance<span class="title__count">200</span></h3>.
     scoreSectionHeading: 'h3.title--page-extra-small',
     scoreRowGroupTop: '.play-detail__group--top',
+    // <span class="play-detail__time"><time class="js-timeago"
+    // datetime="2021-11-13T03:57:33Z" title="...">il y a 5 ans</time></span>
+    // — confirmed live 2026-09-11. src/score-age-highlight.js reads the
+    // ISO datetime attribute directly rather than parsing the localized
+    // relative-time text it wraps.
+    scoreRowTime: '.play-detail__time time[datetime]',
     // Bottom row: mods, this, then pp — osu-web reorders `.play-detail__mods`
     // to the front via `order: -1` and leaves this and `.play-detail__pp` at
     // their natural `order: 0`, so it always renders directly between them.
@@ -121,6 +127,35 @@
     scoreboardTop: '.beatmap-scoreboard-top',
     scoreboardTopScore: '.beatmap-score-top',
     scoreboardRow: '.beatmap-scoreboard-table__body-row',
+
+    // Beatmapset page header — difficulty picker tray (the row of small
+    // diff-colored circle icons above the title). osu-web already colors
+    // each icon via an inline `--diff` custom property and embeds the full
+    // beatmap list (id/version/difficulty_rating) as JSON in
+    // #json-beatmapset — confirmed live 2026-09-11 — so src/beatmap-
+    // picker.js reads both instead of recomputing star ratings/colors
+    // itself.
+    beatmapsetHeader: '.beatmapset-header',
+    beatmapsetJson: '#json-beatmapset',
+    beatmapPicker: '.beatmapset-beatmap-picker',
+    beatmapPickerItem: '.beatmapset-beatmap-picker__beatmap',
+    beatmapPickerIcon: '.beatmap-icon',
+
+    // Beatmapset listing/search cards (/beatmapsets). Each card's per-mode
+    // difficulty "dots" row (.beatmapset-panel__beatmap-icon + one dot per
+    // diff) is server-rendered, but — confirmed live 2026-09-11 — the
+    // numeric star ratings behind it are never sent to the client for this
+    // page at all, unlike the beatmapset page's own #json-beatmapset.
+    // src/max-sr-chip.js gets them the same way osu-web's own search UI
+    // does: a same-origin fetch to /beatmapsets/search (see that file for
+    // why). Only the mode icon is read from the dots row itself — the dots
+    // are capped per set (a "+N" indicator covers the rest on sets with
+    // many diffs), so they aren't a reliable stand-in for "the highest
+    // diff" the way the fetched rating + its own computed color are.
+    beatmapsetListingPanel: '.beatmapset-panel',
+    beatmapsetPanelLink: '.beatmapset-panel__main-link',
+    beatmapsetPanelDotsGroup: '.beatmapset-panel__extra-item--dots',
+    beatmapsetPanelModeIcon: '.beatmapset-panel__beatmap-icon',
 
     // Beatmap search filter panel (/beatmapsets). data-filter-value="0" is
     // unique to the Mode section's "osu!" option — every other section uses

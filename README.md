@@ -13,6 +13,10 @@ PP-stats extension.
 | "IF FC ###pp" label on any non-FC score row | same |
 | Beatmap cover art behind score rows | same |
 | Downloadable PNG "player card" on your profile | same |
+| Difficulty names + star rating on the beatmapset picker tray | same |
+| Max star rating chip on beatmapset listing/search cards | same |
+| Score age period highlight on profile Best Performance | same |
+| Purple site accent color on profile pages | same |
 | Hide medals you haven't unlocked yet | Button on the Medals section itself |
 | Hide the "medal unlocked" popup | Button on the Medals section itself |
 
@@ -118,6 +122,39 @@ community projects, per the PRD's licensing requirements:
   copied** — only its general feature concept (PP-if-FC, PP-at-accuracy,
   PP potential) was used as inspiration, reimplemented independently on top
   of `rosu-pp-js`.
+- **[`osu_expertplus`](https://github.com/inix1257/osu_expertplus)** by
+  inix1257. No license file found in the repo. Its picker-diff-names feature
+  (names + star rating next to each icon in the beatmapset difficulty tray)
+  was the visual reference for `src/beatmap-picker.js`'s pill layout — its
+  bundled userscript was read to understand *how* it works (osu-web itself
+  already exposes each icon's color via an inline `--diff` custom property
+  and the full beatmap list via `#json-beatmapset`, so neither project
+  computes colors or scrapes ratings from rendered text), but no code from
+  it is used here — `src/beatmap-picker.js` and `styles/theme.css`'s picker
+  rules are this project's own implementation against that native osu-web
+  data. Its beatmap-card-extra star-range feature (max star rating on
+  beatmapset listing/search cards) was likewise a visual/feature reference
+  for `src/max-sr-chip.js`, independently reimplemented against plain
+  same-origin fetches to osu-web's own `/beatmapsets/search` endpoint
+  (including its own `cursor_string` for paging alongside "Load more")
+  rather than its more involved page-`fetch`/XHR-hooking approach — see
+  that file's own header comment. One piece **is** taken directly, though:
+  the chip's background/text color ramps (`diffColor`/`diffTextColor` in
+  that file) are osu_expertplus's own port of osu-web's public
+  `getDiffColour`/`getDiffTextColour` (`resources/js/utils/beatmap-
+  helper.ts`), kept verbatim rather than re-derived — both colors are
+  computed from the chip's own rating (matching osu_expertplus's own
+  `buildStarChip`) rather than the background being read off a native dot,
+  after that turned out to mismatch on sets with more diffs than osu-web
+  actually renders dots for (see the file for the full story).
+  osu_expertplus's "Score age period highlight" feature (profile Best
+  Performance only: a slider highlighting scores by how recent they are,
+  weeks through years, with reverse/reset) was likewise a direct feature
+  reference for `src/score-age-highlight.js` — its 0-36 slider-index →
+  weeks/months/years scheme is ported (same domain breakpoints), but the
+  DOM code, UI markup, and CSS are this project's own, reading each row's
+  date straight from its own native `<time datetime>` rather than the
+  reference's own MutationObserver-driven page-tracking approach.
 - **[`rosu-pp-js`](https://github.com/MaxOhn/rosu-pp-js)** by MaxOhn — MIT
   licensed (see `lib/rosu-pp/LICENSE-rosu-pp-js.txt`). This one **is**
   actually used: `lib/rosu-pp/rosu_pp.js` is the published npm package
@@ -151,6 +188,10 @@ src/
     official-engine.js  experimental official-ruleset engine (see engine-bridge/FINDINGS.md)
   theme.js        dark-theme class toggle (US-003)
   cover-art.js    beatmap cover backgrounds (US-010)
+  beatmap-picker.js  difficulty names + star rating on the beatmapset picker
+  max-sr-chip.js  max star rating chip on beatmapset listing/search cards
+  score-age-highlight.js  score age period highlight on Best Performance
+  profile-accent-color.js  purple site accent on profile pages
   scores.js       score-row detection + "IF FC" labels (US-007)
   profile.js      player-card button (US-009) + corner button
   medals.js       medal visibility toggles (US-011)

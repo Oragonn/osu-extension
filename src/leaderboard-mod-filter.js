@@ -73,6 +73,15 @@
   const BTN_ACTIVE_CLASS = 'osu-enhancer-mod-filter-btn--active';
   const GROUP_CLASS = 'osu-enhancer-mod-filter-group';
   const RESULT_LIMIT = 50;
+  // Set on every .pp-value this file has already formatted to 2 decimals —
+  // on our own rebuilt rows (buildPpSpan) up front, and on osu-web's own
+  // native rows/top cards by reformatPrecision below. Its only job is
+  // telling reformatPrecision's rescan apart a once-already-reformatted
+  // .pp-value (text like "1087.85", nothing left to do) from a still-
+  // native one (text like "1 087", osu-web's own rounded display) — since
+  // both live under the same native classes, querying by class alone
+  // can't tell them apart.
+  const PP_PRECISE_ATTR = 'data-osu-enhancer-pp-precise';
 
   const MODE_NAMES = { osu: 'osu', taiko: 'taiko', fruits: 'fruits', mania: 'mania' };
 
@@ -326,14 +335,64 @@
   function buildPpSpan(ppValue) {
     const span = document.createElement('span');
     span.className = 'pp-value';
+    span.setAttribute(PP_PRECISE_ATTR, '1');
     if (ppValue === null || ppValue === undefined) {
       span.title = 'pp is not awarded for this score';
       span.textContent = '-';
     } else {
       span.title = String(ppValue);
-      span.textContent = String(Math.round(ppValue));
+      span.textContent = ppValue.toFixed(2);
     }
     return span;
+  }
+
+  // osu-web's own native rows/top cards (shown whenever no mod filter is
+  // active — see refreshResults's isActive() branch, which restores them
+  // verbatim instead of using buildPpSpan above) render `.pp-value` as a
+  // rounded-to-a-whole-number text node, with the fuller precision only
+  // sitting in its `title` attribute (e.g. text "1 088", title
+  // "1 087,85") — confirmed live. There's no parallel JSON fetch here to
+  // read an exact value from the way scores.js/score-detail.js have, so
+  // this recovers it from that title text instead — locale-independently,
+  // by trying "the last non-digit character in the title is the decimal
+  // separator" and checking whether that actually reproduces the known
+  // rounded value (parsed the same way, but from the *displayed* text,
+  // which is always a plain grouped integer and so never ambiguous). If
+  // it doesn't check out, the title had no fractional part to begin with
+  // (a whole-number pp, e.g. "1 034") and the displayed integer is
+  // already the exact value.
+  function parsePreciseFromTitle(displayedText, titleText) {
+    const roundedInt = parseInt(displayedText.replace(/\D/g, ''), 10);
+    if (!Number.isFinite(roundedInt)) return null;
+
+    const trimmed = (titleText || '').trim();
+    let lastSepIndex = -1;
+    for (let i = trimmed.length - 1; i >= 0; i--) {
+      if (!/[0-9]/.test(trimmed[i])) {
+        lastSepIndex = i;
+        break;
+      }
+    }
+    if (lastSepIndex !== -1) {
+      const intDigits = trimmed.slice(0, lastSepIndex).replace(/\D/g, '');
+      const fracDigits = trimmed.slice(lastSepIndex + 1);
+      const candidate = parseFloat(`${intDigits || '0'}.${fracDigits}`);
+      if (Number.isFinite(candidate) && Math.round(candidate) === roundedInt) {
+        return candidate;
+      }
+    }
+    return roundedInt;
+  }
+
+  function reformatPrecision(container) {
+    if (!container) return;
+    container.querySelectorAll('.pp-value').forEach((span) => {
+      if (span.hasAttribute(PP_PRECISE_ATTR)) return;
+      const precise = parsePreciseFromTitle(span.textContent, span.title);
+      if (precise == null) return;
+      span.textContent = precise.toFixed(2);
+      span.setAttribute(PP_PRECISE_ATTR, '1');
+    });
   }
 
   function cellSpan(extraClass, content) {
@@ -1089,6 +1148,8 @@
   function refresh() {
     injectButtons();
     injectRankBadges();
+    reformatPrecision(document.querySelector(sel.scoreboard));
+    reformatPrecision(document.querySelector(sel.scoreboardTop));
   }
 
   OsuEnhancer.leaderboardModFilter = { refresh };
