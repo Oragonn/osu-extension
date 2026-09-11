@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "OsuRulesetBridge",
   "resources": {
-    "hash": "sha256-dZkTtwp5Z3K3XcURGL2b+NCVgGiKFNes2VUE/7a367o=",
+    "hash": "sha256-f7JkLf3vfGEftTkUj36k/hBx2SdHwmQkv9XfjVUxYmQ=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-nElGk+CZFyq0PbPm4JU8avD6lER7x9Z1C54BK7qY12Q="
     },
@@ -15,7 +15,7 @@
     "assembly": {
       "AutoMapper.wasm": "sha256-yF/oNkbKLA652PjVLH3t4Dc1g+LP9ewWdeFrfUCiEKw=",
       "JetBrains.Annotations.wasm": "sha256-1YyXPxNWC2oah6mpLY+yNDUppvEN3C8jd+y1QGJUzVU=",
-      "MessagePack.Annotations.wasm": "sha256-A6h47dTcpEv+X/Ny1pa8aa4qT1V7Hwiisrqvtt45++s=",
+      "MessagePack.Annotations.wasm": "sha256-56QYMll49T5BdbsSgmE3nJhyDnxoLm+zcrsxwA8B4G0=",
       "Microsoft.CSharp.wasm": "sha256-qGqPSQCKsIQPFpBNoGbyRor0jnjUfMW13MFZxuYHgmQ=",
       "Microsoft.Extensions.DependencyInjection.Abstractions.wasm": "sha256-jjHkWA0MeU9UxN4gyg764cnE1o8rVMHq6kxYz5ZsWWA=",
       "Microsoft.Extensions.Options.wasm": "sha256-sb2HRpyleT4EP/yFUJcszZpE0Yn4iRiw82OiD/ZybFs=",
@@ -23,7 +23,7 @@
       "Microsoft.Win32.Registry.wasm": "sha256-W4Uw3cBloowqcoVgmdbxdUpXc5phVvujPQ+9Ub9gbd8=",
       "MongoDB.Bson.wasm": "sha256-fiBxfNnyp4cw5toLfba38yY2svs2vZFk9cn9v6KWoMY=",
       "Newtonsoft.Json.wasm": "sha256-6tTXxo8y1qiYlYVlCYLFRuqD1Hb/ttHk05oT59wTucI=",
-      "OsuRulesetBridge.wasm": "sha256-KZO8hRbA+9VPHb42zAHo21CQa6+0GRVUpT7gIbe43rA=",
+      "OsuRulesetBridge.wasm": "sha256-FZUIon/K8JkML/lFYpJkODZ5Eln3qkTliX01RRcsw5c=",
       "Realm.wasm": "sha256-xmMceqqk6q6SRosnRELrMypBqiI+qrzriYpSZ+TjCWA=",
       "Remotion.Linq.wasm": "sha256-QlINfyeBHGXN+ba/pnnykS7eUy/v94v2rr/gW7m63ok=",
       "Sentry.wasm": "sha256-XFgJSBOTGGPp43nKq4+GlNShOz87DE5xxp9we+RvDHM=",
@@ -81,7 +81,7 @@
       "nunit.framework.wasm": "sha256-ojmTbYzkatqdA0U6mtWfQ2qSkFf0NMZefRcKR18zkbI=",
       "osu.Framework.wasm": "sha256-Jh202o5nVolfbrCmtf+EIVd/7V1ph6deAf/u9shZoiE=",
       "osu.Game.Rulesets.Osu.wasm": "sha256-E8JXsjmWdpJ5KkfqsEp7zyOVg+QEpIy6oiDO5ejGozg=",
-      "osu.Game.wasm": "sha256-RA8nvFct1ujO8jJTRlWm3bAQ7GftQJfv50rNrgGcwR8=",
+      "osu.Game.wasm": "sha256-/kR+sHnav4dCr/hq//o86wkAS5BRqoX+/Sd1f9CMPuI=",
       "osuTK.wasm": "sha256-kyuhl+vxEZ8usD++sztV50Wrb3GtHKpiE6R3JLah5ME="
     }
   },

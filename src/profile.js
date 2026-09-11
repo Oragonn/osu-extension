@@ -61,6 +61,25 @@
     if (btn) btn.remove();
   }
 
+  // osu-web ships CSS for a colored active-tab underline on .page-mode-link
+  // (.page-mode-link__stripe), but reusing that exact class rendered as an
+  // oversized blob overlapping the tab text once the vendored dark theme
+  // (styles/izuki-theme.css, ~36k lines) was active — something in there
+  // conflicts with it in a way that wasn't worth hunting down line by line.
+  // Using our own class instead means only styles/theme.css governs its
+  // size, so nothing else can touch it; the color still tracks the site's
+  // own per-section hsl(var(--hsl-h1)) variable (see styles/theme.css),
+  // and .page-mode-link--is-active is still their own scrollspy JS toggling
+  // as you scroll, so the underline still follows the active section.
+  function injectStickyToolbarStripes() {
+    document.querySelectorAll(`${sel.stickyToolbar} ${sel.pageModeLink}`).forEach((link) => {
+      if (link.querySelector('.osu-enhancer-page-mode-stripe')) return;
+      const stripe = document.createElement('span');
+      stripe.className = 'osu-enhancer-page-mode-stripe';
+      link.appendChild(stripe);
+    });
+  }
+
   OsuEnhancer.profile = {
     isProfilePage,
     getProfileMeta,
@@ -68,5 +87,6 @@
     removePlayerCardButton,
     renderNoopButton,
     removeNoopButton,
+    injectStickyToolbarStripes,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

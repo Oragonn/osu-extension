@@ -204,16 +204,69 @@ public static partial class Bridge
         return string.Join(" ---> ", parts) + "\n" + ex.ToString();
     }
 
-    private static Mod[] ParseMods(OsuRuleset ruleset, JsonArray? acronyms)
+    // Accepts either a plain acronym string ("HR") or a full APIMod-shaped
+    // object ({"acronym":"DT","settings":{"speed_change":2.0}}) per element —
+    // the two shapes osu!'s own API v2 score JSON mixes: a customized
+    // DT/NC/HT rate ("Rate Change") rides along as mods[].settings on an
+    // otherwise-plain mod entry, with no separate acronym of its own (see
+    // scores.js's renderStarRating). A bare CreateModFromAcronym-only parser
+    // has no way to see that settings dictionary at all, so it always
+    // applied the mod's *default* rate (1.5x/0.75x) even for a score
+    // actually played at e.g. 2.00x. Routing every element through ppy's own
+    // APIMod.ToMod (used internally by the real client for this exact JSON
+    // shape) reflects the settings onto the mod's [SettingSource] bindables
+    // by snake_case name -- SpeedChange -> "speed_change" -- so this stays
+    // correct for every present and future per-mod setting, not just this one.
+    private static Mod[] ParseMods(OsuRuleset ruleset, JsonArray? modsJson)
     {
-        if (acronyms == null)
+        if (modsJson == null)
             return Array.Empty<Mod>();
 
-        return acronyms
-            .Select(a => ruleset.CreateModFromAcronym((string)a!))
-            .Where(m => m != null)
-            .Cast<Mod>()
-            .ToArray();
+        var result = new List<Mod>();
+
+        foreach (var node in modsJson)
+        {
+            string? acronym = null;
+            Dictionary<string, object>? settings = null;
+
+            if (node is JsonValue plainValue && plainValue.TryGetValue(out string? plainAcronym))
+            {
+                acronym = plainAcronym;
+            }
+            else if (node is JsonObject obj)
+            {
+                acronym = obj["acronym"]?.GetValue<string>();
+                if (obj["settings"] is JsonObject settingsObj)
+                {
+                    settings = new Dictionary<string, object>();
+                    foreach (var kvp in settingsObj)
+                    {
+                        if (kvp.Value is not JsonValue settingValue)
+                            continue;
+                        if (settingValue.TryGetValue(out double numberValue))
+                            settings[kvp.Key] = numberValue;
+                        else if (settingValue.TryGetValue(out bool boolValue))
+                            settings[kvp.Key] = boolValue;
+                        else if (settingValue.TryGetValue(out string? stringValue))
+                            settings[kvp.Key] = stringValue!;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(acronym))
+                continue;
+
+            var apiMod = new osu.Game.Online.API.APIMod
+            {
+                Acronym = acronym,
+                Settings = settings ?? new Dictionary<string, object>(),
+            };
+            var mod = apiMod.ToMod(ruleset);
+            if (mod is not UnknownMod)
+                result.Add(mod);
+        }
+
+        return result.ToArray();
     }
 
     /// <summary>

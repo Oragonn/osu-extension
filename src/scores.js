@@ -236,7 +236,13 @@
 
   async function renderStarRating(row, score) {
     const baseRating = score.beatmap && score.beatmap.difficulty_rating;
-    const mods = (score.mods || []).map((m) => m.acronym);
+    // Kept as the raw {acronym, settings} objects, not just acronym strings —
+    // a customized DT/NC/HT rate (osu!'s "Rate Change", e.g. a 2.00x DT)
+    // rides along as mods[].settings.speed_change with no separate acronym
+    // of its own (see leaderboard-mod-filter.js's file comment). Stripping
+    // settings here used to silently compute every customized-rate score at
+    // that mod's *default* rate (1.5x/0.75x) instead of its real one.
+    const mods = score.mods || [];
     let stars = baseRating;
 
     // The API's own difficulty_rating is ground truth for the unmodded map
@@ -381,7 +387,10 @@
       await renderStatBlock(row, score);
 
       if (score.pp == null) {
-        const mods = (score.mods || []).map((m) => m.acronym);
+        // Raw {acronym, settings} objects — see renderStarRating's comment
+        // on why a customized DT/NC/HT rate needs settings, not just the
+        // acronym, to compute correctly.
+        const mods = score.mods || [];
         // score.statistics uses lazer's judgement names (great/ok/meh/miss) —
         // osu!std's n300/n100/n50/misses under different labels — giving
         // rosu-pp the exact per-judgement counts instead of an overall
@@ -404,7 +413,7 @@
 
       let ppIfFc = null;
       if (toggles.ppIfFc && !score.is_perfect_combo) {
-        const mods = (score.mods || []).map((m) => m.acronym);
+        const mods = score.mods || [];
         ppIfFc = await OsuEnhancer.ppCalc.calculatePpIfFc(score.beatmap_id, {
           accuracy: score.accuracy * 100,
           mods,

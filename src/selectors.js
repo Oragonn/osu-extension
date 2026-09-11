@@ -46,8 +46,11 @@
     profileTabLink: '.header-nav-v4__link',
     profileTabActive: '.header-nav-v4__link--active',
 
-    // Extra-pages tab strip (me! / recent / Scores / Historical / Medals / Beatmaps / Kudosu!).
+    // Extra-pages tab strip (me! / recent / Scores / Historical / Medals / Beatmaps / Kudosu!),
+    // and the sticky scrollspy toolbar it lives in on profile pages.
     pageModeItem: '.page-mode__item',
+    pageModeLink: '.page-mode-link',
+    stickyToolbar: '.sticky-toolbar',
     beatmapsetPanel: '.beatmapset-panel',
 
     // Medals — confirmed against a real osu! userstyle's selector list
@@ -89,12 +92,35 @@
     // judgement-count and slider-tick breakdowns, same class, so this must
     // stay scoped to the first one rather than a bare ".score-stats__group-row").
     scoreDetailStatsRow: '.score-stats__group--stats > .score-stats__group-row:first-child',
+    // The player card shown next to the score stats — same .user-card
+    // component osu-web uses in several other spots (hover usercards,
+    // rankings tables), but this page only ever renders one, and
+    // score-detail.js already gates every use of this behind isScoreDetailPage().
+    scoreDetailUsername: '.user-card__username',
     // osu-web hydrates this page's React island from a JSON blob it already
     // embeds server-side — the exact same score shape (mods/statistics/
     // beatmap_id/is_perfect_combo/pp/legacy_score_id) as the
     // /users/<id>/scores/<type> endpoint scores.js fetches, so no extra
     // network request is needed here.
     scoreDetailJson: '#json-show',
+
+    // Beatmap leaderboard (/beatmapsets/<set>#<mode>/<diff>). The native
+    // mod-specific ranking (.beatmapset-scoreboard__mods icon row) 422s for
+    // non-supporters — confirmed live 2026-09-09 (GET .../scores?mods[]=DT
+    // returns 422, plain .../scores?type=global returns 200) — so
+    // src/leaderboard-mod-filter.js replaces that whole row with its own
+    // button group backed by the official API v2 (see src/background.js).
+    scoreboard: '.beatmapset-scoreboard',
+    scoreboardPageTabs: '.beatmapset-scoreboard > .page-tabs',
+    scoreboardNativeMods: '.beatmapset-scoreboard__mods',
+    // Wrapper around the "top score" card(s) shown above the paginated
+    // table — normally the #1 global score plus your own score if it
+    // isn't already that one. leaderboard-mod-filter.js swaps its contents
+    // for a single rebuilt card matching the active mod filter, since the
+    // native card(s) reflect the unfiltered leaderboard.
+    scoreboardTop: '.beatmap-scoreboard-top',
+    scoreboardTopScore: '.beatmap-score-top',
+    scoreboardRow: '.beatmap-scoreboard-table__body-row',
 
     // Beatmap search filter panel (/beatmapsets). data-filter-value="0" is
     // unique to the Mode section's "osu!" option — every other section uses

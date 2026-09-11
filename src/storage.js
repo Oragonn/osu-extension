@@ -15,6 +15,9 @@
     playerCard: true,
     medalFilter: 'all', // 'all' | 'completed' | 'missing'
     ppEngine: 'rosu', // 'rosu' | 'official'
+    osuApiClientId: '', // for the "DT only" leaderboard lookup (official osu! API v2)
+    osuApiClientSecret: '',
+    showLeaderboardRank: false, // needs osuApiClientId/Secret above — silently no-ops without them
   };
 
   const LISTENERS = [];

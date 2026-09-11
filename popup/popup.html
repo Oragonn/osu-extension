@@ -12,6 +12,7 @@
   </header>
 
   <main class="popup__list">
+    <a class="popup__notice" id="rosuNotice" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
     <label class="toggle">
       <span>Dark theme</span>
       <input type="checkbox" data-toggle="darkTheme" />
@@ -32,6 +33,11 @@
       <input type="checkbox" data-toggle="playerCard" />
       <span class="toggle__switch"></span>
     </label>
+    <label class="toggle">
+      <span>Player rank next to usernames (needs osu! API below)</span>
+      <input type="checkbox" data-toggle="showLeaderboardRank" />
+      <span class="toggle__switch"></span>
+    </label>
     <hr />
     <label class="select-row">
       <span>PP calculation engine</span>
@@ -40,6 +46,18 @@
         <option value="official">Official game code (ppy)</option>
       </select>
     </label>
+    <hr />
+    <div class="api-section">
+      <div class="api-section__heading">osu! API</div>
+      <label class="api-section__row">
+        <span>Client ID</span>
+        <input type="text" data-api-toggle="osuApiClientId" autocomplete="off" spellcheck="false" />
+      </label>
+      <label class="api-section__row">
+        <span>Client secret</span>
+        <input type="password" data-api-toggle="osuApiClientSecret" autocomplete="off" spellcheck="false" />
+      </label>
+    </div>
   </main>
 
   <footer class="popup__footer">
@@ -49,6 +67,7 @@
   </footer>
 
   <script src="../src/storage.js"></script>
+  <script src="../src/rosu-update-shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

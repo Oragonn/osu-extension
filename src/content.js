@@ -8,8 +8,18 @@
 
   console.log('[osu! Enhancer] content script loaded on', location.href);
 
-  const { storage, theme, scores, scoreDetail, profile, medals, playerCard, settingsPanel, modeFilter } =
-    window.OsuEnhancer;
+  const {
+    storage,
+    theme,
+    scores,
+    scoreDetail,
+    profile,
+    medals,
+    playerCard,
+    settingsPanel,
+    modeFilter,
+    leaderboardModFilter,
+  } = window.OsuEnhancer;
 
   let currentToggles = null;
   let rescanQueued = false;
@@ -22,6 +32,7 @@
     settingsPanel.init();
     scores.applyRankNumbers();
     modeFilter.applyDefaultMode();
+    leaderboardModFilter.refresh();
 
     if (profile.isProfilePage() && toggles.playerCard) {
       profile.renderPlayerCardButton(() => playerCard.downloadPlayerCard());
@@ -31,6 +42,7 @@
 
     if (profile.isProfilePage()) {
       profile.renderNoopButton();
+      profile.injectStickyToolbarStripes();
     } else {
       profile.removeNoopButton();
     }

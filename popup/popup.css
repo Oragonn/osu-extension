@@ -40,6 +40,23 @@ body {
   flex-direction: column;
 }
 
+.popup__notice {
+  display: block;
+  margin: 2px 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 77, 109, 0.12);
+  border: 1px solid rgba(255, 77, 109, 0.4);
+  color: #ff8fc4;
+  font-size: 11px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.popup__notice:hover {
+  text-decoration: underline;
+}
+
 .popup__list hr {
   border: none;
   border-top: 1px solid #26263a;
@@ -107,6 +124,37 @@ body {
   padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
+}
+
+.api-section {
+  padding: 6px 0 4px;
+}
+
+.api-section__heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cfcfe0;
+  margin-bottom: 4px;
+}
+
+.api-section__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: default;
+}
+
+.api-section__row input {
+  flex: 1;
+  min-width: 0;
+  background: #26263a;
+  color: #f2f2f5;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 .popup__footer {

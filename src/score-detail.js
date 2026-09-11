@@ -41,8 +41,78 @@
     return stat;
   }
 
+  // score.ruleset_id -> the mode name the osu! API's per-user rank lookup
+  // needs (same 0/1/2/3 convention leaderboard-mod-filter.js's MODE_NAMES
+  // is keyed by mode *name*, not id, for — this page's embedded score JSON
+  // only gives the id).
+  const RULESET_MODES = ['osu', 'taiko', 'fruits', 'mania'];
+
+  // Appends the player's global rank next to their name in the player card
+  // (.user-card__username-row, confirmed live to be a plain flex row — an
+  // after-sibling here lands to the right with no special-casing needed,
+  // unlike the beatmap leaderboard's *grid*-laid-out top card — see
+  // leaderboard-mod-filter.js's insertRankBadge). Shares the lookup/cache
+  // with that same "showLeaderboardRank" toggle via src/player-rank.js.
+  function hasRankBadge(link) {
+    return !!(link.nextElementSibling && link.nextElementSibling.classList.contains('osu-enhancer-player-rank'));
+  }
+
+  // This page actually renders *two* .user-card__username elements for the
+  // same player (confirmed live: a responsive mobile/desktop pair, both
+  // real DOM nodes — only one shown at a time via CSS) — a bare
+  // document.querySelector grabs whichever comes first in DOM order, which
+  // isn't necessarily the one CSS is currently showing, and inserting next
+  // to the hidden one produces a badge that's genuinely in the DOM (findable
+  // by class) but has a zero-size box at (0,0), invisible. getClientRects()
+  // is empty for anything inside a display:none ancestor (unlike
+  // offsetParent, this also works for position:fixed content), so this
+  // picks the first candidate that's actually laid out.
+  function findVisibleUsernameLink() {
+    const candidates = document.querySelectorAll(sel.scoreDetailUsername);
+    for (const el of candidates) {
+      if (el.getClientRects().length > 0) return el;
+    }
+    return candidates[0] || null;
+  }
+
+  async function injectPlayerRank(score, toggles) {
+    if (!toggles.showLeaderboardRank) return;
+    const link = findVisibleUsernameLink();
+    // Checking for the badge itself — not a one-time "already processed"
+    // flag on the link — is what makes this self-healing. This page keeps a
+    // live websocket connection (online-status/notification updates), and
+    // osu-web's React re-renders .user-card__username-row off the back of
+    // that independently of anything we do. Confirmed live: React reuses
+    // the *same* <a> element across such a re-render (so a one-time marker
+    // attribute on it would wrongly persist and be trusted), while
+    // discarding any sibling it doesn't recognize from its own virtual DOM —
+    // i.e. our badge — the insert had genuinely succeeded and then vanished
+    // on the very next unrelated re-render. Re-checking presence every scan
+    // means a rescan that finds the link but no badge just re-adds it.
+    if (!link || hasRankBadge(link)) return;
+
+    const mode = RULESET_MODES[score.ruleset_id];
+    if (mode == null || score.user_id == null) return;
+
+    const rank = (await OsuEnhancer.playerRank.getRanks([score.user_id], mode)).get(score.user_id);
+    if (rank == null) return;
+
+    // Re-query rather than trust `link` held across the await above, for
+    // the same reason: it may have been swapped for a different (or
+    // rebuilt) node while the rank lookup was in flight.
+    const currentLink = findVisibleUsernameLink() || link;
+    if (hasRankBadge(currentLink)) return; // a concurrent/earlier pass already added it
+    currentLink.insertAdjacentElement('afterend', OsuEnhancer.playerRank.buildBadge(rank));
+  }
+
   async function process(row, score, toggles) {
-    const mods = (score.mods || []).map((m) => m.acronym);
+    // Raw {acronym, settings} objects, not just acronym strings — a
+    // customized DT/NC/HT rate (e.g. a 2.00x "Rate Change" score) rides
+    // along as mods[].settings.speed_change with no acronym of its own (see
+    // scores.js's renderStarRating). Dropping settings here used to
+    // silently compute every customized-rate score at that mod's *default*
+    // rate instead of its real one.
+    const mods = score.mods || [];
     const isLegacy = score.legacy_score_id != null;
 
     if (score.pp == null) {
@@ -84,11 +154,20 @@
   async function scanAndProcess(toggles) {
     if (!isScoreDetailPage()) return;
 
-    const row = document.querySelector(sel.scoreDetailStatsRow);
-    if (!row || row.getAttribute(PROCESSED_ATTR)) return;
-
     const score = readScore();
     if (!score) return;
+
+    // Independent of the stats row below: the player card is a separate
+    // element with its own processed-marker (see injectPlayerRank), so one
+    // failing/being reprocessed doesn't block the other.
+    try {
+      await injectPlayerRank(score, toggles);
+    } catch (err) {
+      console.warn('[osu-enhancer] failed to inject player rank on score detail page', err);
+    }
+
+    const row = document.querySelector(sel.scoreDetailStatsRow);
+    if (!row || row.getAttribute(PROCESSED_ATTR)) return;
 
     row.setAttribute(PROCESSED_ATTR, '1');
     try {
@@ -100,6 +179,13 @@
   }
 
   function clearAll() {
+    // Checks every .user-card__username on the page (not just the visible
+    // one) since the badge could in principle have ended up next to either
+    // — see findVisibleUsernameLink.
+    document.querySelectorAll(sel.scoreDetailUsername).forEach((link) => {
+      if (hasRankBadge(link)) link.nextElementSibling.remove();
+    });
+
     const row = document.querySelector(sel.scoreDetailStatsRow);
     if (!row) return;
     row.removeAttribute(PROCESSED_ATTR);

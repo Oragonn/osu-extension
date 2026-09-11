@@ -15,6 +15,24 @@ html.osu-enhancer-dark {
   color-scheme: dark;
 }
 
+/* izuki-theme.css's own .mod rule gives every mod icon a fixed
+   width: calc(var(--mod-height,22px)*45/32) — sized for a single plain
+   icon, since (unlike upstream app.css, which never sets an explicit width
+   on .mod at all) it predates osu!'s "Rate Change" extender. When a mod
+   carries a customized DT/NC/HT rate, osu! adds a second flex child
+   (.mod__extender, the "2.00×" pill — see leaderboard-mod-filter.js's
+   buildNativeModIcon) alongside .mod__icon. With .mod's width now fixed
+   too small to fit both, the flex layout has to shrink someone: .mod__icon
+   has no real content (its glyph is pure ::before/::after mask
+   decoration), so its automatic minimum size is 0 and it's the one that
+   gets crushed away entirely, while .mod__extender's actual text content
+   keeps its size — the icon disappears and only the "×" badge is left.
+   Restoring auto width (matching upstream) whenever an extender is present
+   lets both children size normally again. */
+html.osu-enhancer-dark .mod:has(.mod__extender) {
+  width: auto;
+}
+
 /* .beatmap-scoreboard-top (the list of score cards) is a plain flex
    container in the vendored theme, and a flex item with no explicit width
    sizes to its own content instead of stretching to fill its row — so
@@ -448,6 +466,113 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   cursor: pointer;
 }
 
+/* ---------- Sticky scrollspy toolbar active-tab underline ---------- */
+
+/* osu's own .page-mode-link is already position: relative, so this anchors
+   correctly without us touching that element. Deliberately our own class
+   (not their .page-mode-link__stripe) so only this rule ever sizes it —
+   see the comment in src/profile.js for why. */
+.osu-enhancer-page-mode-stripe {
+  display: block;
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 100%;
+  height: 3px;
+  border-radius: 10px;
+  background-color: transparent;
+  pointer-events: none;
+}
+
+/* Color only, from the same per-page-section variable osu's own nav active
+   indicator uses (.nav2__menu-link-bar) — .page-mode-link--is-active is
+   still their own scrollspy JS toggling this as you scroll. */
+.page-mode-link--is-active .osu-enhancer-page-mode-stripe,
+.page-mode-link.js-is-active .osu-enhancer-page-mode-stripe {
+  background-color: hsl(var(--hsl-h1));
+}
+
+/* ---------- Leaderboard player-rank badges ("showLeaderboardRank" toggle) ---------- */
+
+/* Sits right after the username link (see leaderboard-mod-filter.js's
+   injectRankBadges) on both the native leaderboard and this file's own
+   reconstructed rows/top card — a plain inline span, not absolutely
+   positioned, so it just flows after the name like a second label. */
+.osu-enhancer-player-rank {
+  margin-left: 6px;
+  color: #cfcfe0;
+  font-weight: 700;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* ---------- Leaderboard mod-filter buttons (replaces the native mod icon row) ---------- */
+
+.osu-enhancer-mod-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+/* The icon inside is centered via an inline style set in JS
+   (buildNativeModIcon in leaderboard-mod-filter.js), not a rule here —
+   the vendored dark theme (styles/izuki-theme.css, ~36k lines, only
+   loaded when the dark toggle is on) very plausibly redefines
+   .mod/.mod__icon somewhere in there too, and an inline style is the only
+   way to guarantee this wins regardless of stylesheet load order. */
+.osu-enhancer-mod-filter-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid #4a4a5e;
+  background: #1b1b24;
+  cursor: pointer;
+}
+
+.osu-enhancer-mod-filter-btn:hover {
+  border-color: #ff66ab;
+}
+
+.osu-enhancer-mod-filter-btn--active {
+  background: rgba(255, 102, 171, 0.18);
+  border-color: #ff66ab;
+}
+
+/* No native icon exists for "Lazer" (it's the absence of Classic, not a
+   mod of its own) — reuses the Classic sprite with a strike through it. */
+.osu-enhancer-lazer-icon {
+  position: relative;
+}
+
+.osu-enhancer-lazer-icon__strike {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  width: 80%;
+  height: 2px;
+  background: #ff4d6d;
+  transform: translateY(-50%) rotate(-45deg);
+  pointer-events: none;
+}
+
+/* The one non-native row this feature adds — everything else in the
+   table is built from the real .beatmap-scoreboard-table__* classes so it
+   matches osu's own row styling automatically. */
+.osu-enhancer-mod-filter-message-cell {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #8c8ca0;
+}
+
+.osu-enhancer-mod-filter-message-cell__link {
+  color: #ff8fc4;
+}
+
 /* ---------- Medal visibility + controls (US-011) ---------- */
 
 .osu-enhancer-medal-hidden {
@@ -486,11 +611,12 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
 }
 
 .osu-enhancer-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: #e4e4ef;
-  font-size: 18px;
-  line-height: 1;
   cursor: pointer;
   padding: 8px;
 }
@@ -566,6 +692,70 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   background: #fff;
 }
 
+/* ---------- Page-wide "rosu-pp is outdated" banner ---------- */
+
+.osu-enhancer-update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 10px 44px;
+  background: #ff66ab;
+  color: #1b1123;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.osu-enhancer-update-banner__link {
+  color: #1b1123;
+  text-decoration: underline;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.osu-enhancer-update-banner__close {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #1b1123;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.osu-enhancer-update-banner__close:hover {
+  opacity: 0.65;
+}
+
+.osu-enhancer-settings-panel__notice {
+  display: block;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 77, 109, 0.12);
+  border: 1px solid rgba(255, 77, 109, 0.4);
+  color: #ff8fc4;
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.osu-enhancer-settings-panel__notice:hover {
+  text-decoration: underline;
+}
+
 .osu-enhancer-settings-panel__row--select {
   cursor: default;
   border-top: 1px solid #33334a;
@@ -581,6 +771,40 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
+}
+
+.osu-enhancer-settings-panel__api-section {
+  border-top: 1px solid #33334a;
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.osu-enhancer-settings-panel__api-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cfcfe0;
+  margin-bottom: 4px;
+}
+
+.osu-enhancer-settings-panel__api-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #e4e4ef;
+}
+
+.osu-enhancer-settings-panel__api-input {
+  flex: 1;
+  min-width: 0;
+  background: #33334a;
+  color: #e4e4ef;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 /* ---------- Score detail page (/scores/<id>) pp stats ---------- */
