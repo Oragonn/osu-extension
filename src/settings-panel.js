@@ -106,35 +106,50 @@
       panel.appendChild(row);
     });
 
-    // Not a boolean toggle (like medalFilter, this gets bespoke UI rather
+    // Not boolean toggles (like medalFilter, these get bespoke UI rather
     // than being forced into TOGGLE_DEFS's checkbox loop above).
-    const engineRow = document.createElement('label');
-    engineRow.className = 'osu-enhancer-settings-panel__row osu-enhancer-settings-panel__row--select';
-
-    const engineText = document.createElement('span');
-    engineText.textContent = 'PP calculation engine';
-
-    const engineSelect = document.createElement('select');
-    engineSelect.className = 'osu-enhancer-settings-panel__select';
-    [
-      ['rosu', 'rosu-pp (bundled)'],
-      ['official', 'Official game code (ppy)'],
-    ].forEach(([value, label]) => {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = label;
-      engineSelect.appendChild(option);
-    });
-    engineSelect.value = toggles.ppEngine || 'rosu';
-    engineSelect.addEventListener('change', () => OsuEnhancer.storage.setToggle('ppEngine', engineSelect.value));
-
-    engineRow.appendChild(engineText);
-    engineRow.appendChild(engineSelect);
-    panel.appendChild(engineRow);
+    panel.appendChild(
+      buildSelectRow('Default mode on beatmap listing', 'defaultBeatmapMode', toggles, [
+        ['osu', 'osu!'],
+        ['taiko', 'osu!taiko'],
+        ['fruits', 'osu!catch'],
+        ['mania', 'osu!mania'],
+        ['any', 'Any (no default)'],
+      ])
+    );
+    panel.appendChild(
+      buildSelectRow('PP calculation engine', 'ppEngine', toggles, [
+        ['rosu', 'rosu-pp (bundled)'],
+        ['official', 'Official game code (ppy)'],
+      ])
+    );
 
     panel.appendChild(buildApiCredentialsSection(toggles));
 
     return panel;
+  }
+
+  function buildSelectRow(label, key, toggles, options) {
+    const row = document.createElement('label');
+    row.className = 'osu-enhancer-settings-panel__row osu-enhancer-settings-panel__row--select';
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    const select = document.createElement('select');
+    select.className = 'osu-enhancer-settings-panel__select';
+    options.forEach(([value, optionLabel]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = optionLabel;
+      select.appendChild(option);
+    });
+    select.value = toggles[key] || options[0][0];
+    select.addEventListener('change', () => OsuEnhancer.storage.setToggle(key, select.value));
+
+    row.appendChild(text);
+    row.appendChild(select);
+    return row;
   }
 
   // For the "DT only" leaderboard button (src/leaderboard-mod-filter.js) —

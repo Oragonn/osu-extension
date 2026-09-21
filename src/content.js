@@ -36,7 +36,7 @@
     medals.injectMedalControls(toggles);
     settingsPanel.init();
     scores.applyRankNumbers();
-    modeFilter.applyDefaultMode();
+    modeFilter.applyDefaultMode(toggles.defaultBeatmapMode);
     leaderboardModFilter.refresh();
     beatmapPicker.apply(toggles.pickerDiffNames);
     beatmapCoverDownload.apply(toggles.coverDownloadButton);

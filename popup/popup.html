@@ -60,8 +60,18 @@
     </label>
     <hr />
     <label class="select-row">
+      <span>Default mode on beatmap listing</span>
+      <select data-select-toggle="defaultBeatmapMode">
+        <option value="osu">osu!</option>
+        <option value="taiko">osu!taiko</option>
+        <option value="fruits">osu!catch</option>
+        <option value="mania">osu!mania</option>
+        <option value="any">Any (no default)</option>
+      </select>
+    </label>
+    <label class="select-row">
       <span>PP calculation engine</span>
-      <select data-engine-toggle="ppEngine">
+      <select data-select-toggle="ppEngine">
         <option value="rosu">rosu-pp (bundled)</option>
         <option value="official">Official game code (ppy)</option>
       </select>

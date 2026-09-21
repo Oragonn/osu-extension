@@ -162,8 +162,11 @@
     // unique to the Mode section's "osu!" option — every other section uses
     // string keywords (Categories, Explicit, Extra, Played) or values
     // starting at 1 (Genre, Language, Rank Achieved) — confirmed against
-    // the live filter panel's DOM, so no extra scoping to the "Mode" header
-    // is needed.
+    // the live filter panel's DOM, so the osu! link needs no extra scoping
+    // to the "Mode" header. Values 1/2/3 (taiko/catch/mania) are NOT unique
+    // that way, so mode-filter.js finds them as siblings of this link
+    // (modeFilterItem) instead of querying the whole document.
     modeFilterOsuLink: '.beatmapsets-search-filter__item[data-filter-value="0"]',
+    modeFilterItem: '.beatmapsets-search-filter__item',
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -18,6 +18,7 @@ PP-stats extension.
 | Cover download button on beatmapset pages | same |
 | Score age period highlight on profile Best Performance | same |
 | Purple site accent color on profile pages | same |
+| Default Mode filter on the beatmap listing (osu!, taiko, catch, mania, or Any) — applied on a fresh visit and when you reload (Ctrl+R) from any mode | same — a dropdown rather than a toggle; defaults to osu! |
 | Hide medals you haven't unlocked yet | Button on the Medals section itself |
 | Hide the "medal unlocked" popup | Button on the Medals section itself |
 
@@ -196,8 +197,8 @@ src/
   theme.js        dark-theme class toggle (US-003)
   cover-art.js    beatmap cover backgrounds (US-010)
   beatmap-picker.js  difficulty names + star rating on the beatmapset picker
-  max-sr-chip.js  max star rating chip on beatmapset listing/search cards
   beatmap-cover-download.js  cover download button on beatmapset pages
+  max-sr-chip.js  max star rating chip on beatmapset listing/search cards
   score-age-highlight.js  score age period highlight on Best Performance
   profile-accent-color.js  purple site accent on profile pages
   scores.js       score-row detection + "IF FC" labels (US-007)

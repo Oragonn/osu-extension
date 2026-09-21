@@ -18,6 +18,7 @@
     coverDownloadButton: true, // download-cover button on beatmapset pages
     scoreAgeHighlight: true, // score age period highlight on profile Best Performance
     profileAccentColor: false, // purple site accent (nav underline, hover highlights, ...) on profile pages
+    defaultBeatmapMode: 'osu', // 'osu' | 'taiko' | 'fruits' | 'mania' | 'any' — Mode filter preselected on /beatmapsets; 'any' leaves osu!'s own default
     medalFilter: 'all', // 'all' | 'completed' | 'missing'
     ppEngine: 'rosu', // 'rosu' | 'official'
     osuApiClientId: '', // for the "DT only" leaderboard lookup (official osu! API v2)
