@@ -234,6 +234,14 @@
     return STAR_COLOR_STOPS[STAR_COLOR_STOPS.length - 1][1];
   }
 
+  // Below 6.5★ the chip's background is one of the light cyan/green/yellow/
+  // salmon stops, where white text is hard to read — osu-web's own
+  // getDiffTextColour (mirrored by max-sr-chip.js's diffTextColor for the
+  // beatmap listing chip) switches to black at the same cutoff.
+  function starRatingTextColor(stars) {
+    return stars < 6.5 ? '#000' : '#fff';
+  }
+
   async function renderStarRating(row, score) {
     const baseRating = score.beatmap && score.beatmap.difficulty_rating;
     // Kept as the raw {acronym, settings} objects, not just acronym strings —
@@ -273,6 +281,7 @@
     }
     const [r, g, b] = starRatingColor(stars);
     el.style.setProperty('--osu-enhancer-star-color', `rgb(${r}, ${g}, ${b})`);
+    el.style.setProperty('--osu-enhancer-star-text-color', starRatingTextColor(stars));
     el.textContent = `★ ${formatStars(stars)}`;
   }
 

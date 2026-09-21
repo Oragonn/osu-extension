@@ -18,7 +18,7 @@
     },
     "default_title": "osu! Enhancer"
   },
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage", "alarms", "downloads"],
   "host_permissions": ["*://osu.ppy.sh/*", "https://registry.npmjs.org/*"],
   "background": {
     "service_worker": "src/background.js"
@@ -42,6 +42,7 @@
         "src/theme.js",
         "src/mode-filter.js",
         "src/beatmap-picker.js",
+        "src/beatmap-cover-download.js",
         "src/max-sr-chip.js",
         "src/cover-art.js",
         "src/scores.js",

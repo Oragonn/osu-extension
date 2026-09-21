@@ -1,10 +1,9 @@
 /**
- * MV3 service worker. Two independent jobs, both here rather than in the
- * content script because a fetch initiated there is subject to
- * osu.ppy.sh's own CSP (outside our control) and to normal cross-origin
- * CORS restrictions; a service worker isn't subject to either, and with
- * host_permissions declared for a target origin can bypass CORS for it
- * outright:
+ * MV3 service worker. Independent jobs, all here rather than in the content
+ * script because a fetch initiated there is subject to osu.ppy.sh's own CSP
+ * (outside our control) and to normal cross-origin CORS restrictions; a
+ * service worker isn't subject to either, and with host_permissions
+ * declared for a target origin can bypass CORS for it outright:
  *
  * 1. Periodically ask npm whether rosu-pp-js has a newer release than
  *    what's vendored in lib/rosu-pp/, cached for the popup and settings
@@ -13,6 +12,12 @@
  *    "No Mod" — src/leaderboard-mod-filter.js), get an OAuth token for the
  *    user's own osu! API client and fetch scores matching an exact mod
  *    combination for a beatmap.
+ * 3. On request from the cover-download button on beatmapset pages
+ *    (src/beatmap-cover-download.js), save the full-size cover image via
+ *    chrome.downloads.download() — assets.ppy.sh sends no CORS headers, so
+ *    a content-script fetch() into a blob would only get an opaque,
+ *    unreadable response; the downloads API isn't a fetch and isn't
+ *    subject to that, but it's only available from here.
  */
 importScripts('rosu-update-shared.js');
 
@@ -430,6 +435,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     fetchUserRanks(clientId, clientSecret, userIds, mode)
       .then(sendResponse)
       .catch((err) => sendResponse({ ok: false, error: String((err && err.message) || err) }));
+    return true;
+  }
+  if (message && message.type === 'osu-enhancer:download-cover') {
+    const { url, filename } = message;
+    chrome.downloads.download({ url, filename, conflictAction: 'uniquify' }, (downloadId) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ ok: true, downloadId });
+      }
+    });
     return true;
   }
   return undefined;

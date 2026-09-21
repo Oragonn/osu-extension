@@ -15,6 +15,7 @@ PP-stats extension.
 | Downloadable PNG "player card" on your profile | same |
 | Difficulty names + star rating on the beatmapset picker tray | same |
 | Max star rating chip on beatmapset listing/search cards | same |
+| Cover download button on beatmapset pages | same |
 | Score age period highlight on profile Best Performance | same |
 | Purple site accent color on profile pages | same |
 | Hide medals you haven't unlocked yet | Button on the Medals section itself |
@@ -154,7 +155,13 @@ community projects, per the PRD's licensing requirements:
   weeks/months/years scheme is ported (same domain breakpoints), but the
   DOM code, UI markup, and CSS are this project's own, reading each row's
   date straight from its own native `<time datetime>` rather than the
-  reference's own MutationObserver-driven page-tracking approach.
+  reference's own MutationObserver-driven page-tracking approach. Its
+  square "open background" button on beatmapset pages (native
+  `btn-osu-big--beatmapset-header-square` styling, `fa-image` icon) was the
+  direct visual reference for `src/beatmap-cover-download.js`'s button; the
+  code itself is this project's own, and it actually saves the file via
+  `chrome.downloads.download()` (background.js) instead of opening the
+  image in a new tab.
 - **[`rosu-pp-js`](https://github.com/MaxOhn/rosu-pp-js)** by MaxOhn — MIT
   licensed (see `lib/rosu-pp/LICENSE-rosu-pp-js.txt`). This one **is**
   actually used: `lib/rosu-pp/rosu_pp.js` is the published npm package
@@ -190,6 +197,7 @@ src/
   cover-art.js    beatmap cover backgrounds (US-010)
   beatmap-picker.js  difficulty names + star rating on the beatmapset picker
   max-sr-chip.js  max star rating chip on beatmapset listing/search cards
+  beatmap-cover-download.js  cover download button on beatmapset pages
   score-age-highlight.js  score age period highlight on Best Performance
   profile-accent-color.js  purple site accent on profile pages
   scores.js       score-row detection + "IF FC" labels (US-007)

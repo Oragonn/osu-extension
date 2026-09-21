@@ -15,6 +15,7 @@
     playerCard: true,
     pickerDiffNames: true, // difficulty names + star rating on the beatmapset picker tray
     listingMaxSr: true, // max star rating chip on beatmapset listing/search cards
+    coverDownloadButton: true, // download-cover button on beatmapset pages
     scoreAgeHighlight: true, // score age period highlight on profile Best Performance
     profileAccentColor: false, // purple site accent (nav underline, hover highlights, ...) on profile pages
     medalFilter: 'all', // 'all' | 'completed' | 'missing'

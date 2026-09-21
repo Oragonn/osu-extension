@@ -69,6 +69,7 @@
     { key: 'playerCard', label: 'Downloadable player card' },
     { key: 'pickerDiffNames', label: 'Difficulty names + star rating on picker' },
     { key: 'listingMaxSr', label: 'Max star rating on listing cards' },
+    { key: 'coverDownloadButton', label: 'Cover download button on beatmap pages' },
     { key: 'scoreAgeHighlight', label: 'Score age period highlight (Best Performance)' },
     { key: 'profileAccentColor', label: 'Purple accent color on profile pages' },
     { key: 'showLeaderboardRank', label: 'Player rank next to usernames (needs osu! API below)' },

@@ -20,6 +20,7 @@
     modeFilter,
     leaderboardModFilter,
     beatmapPicker,
+    beatmapCoverDownload,
     maxSrChip,
     scoreAgeHighlight,
     profileAccentColor,
@@ -38,6 +39,7 @@
     modeFilter.applyDefaultMode();
     leaderboardModFilter.refresh();
     beatmapPicker.apply(toggles.pickerDiffNames);
+    beatmapCoverDownload.apply(toggles.coverDownloadButton);
     maxSrChip.apply(toggles.listingMaxSr);
     scoreAgeHighlight.apply(toggles.scoreAgeHighlight);
     profileAccentColor.apply(toggles.profileAccentColor);
@@ -153,6 +155,8 @@
       runScoreFeatures(currentToggles);
     } else if (key === 'pickerDiffNames') {
       beatmapPicker.apply(value);
+    } else if (key === 'coverDownloadButton') {
+      beatmapCoverDownload.apply(value);
     } else if (key === 'listingMaxSr') {
       maxSrChip.apply(value);
     } else if (key === 'scoreAgeHighlight') {

@@ -154,6 +154,7 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
 
 .osu-enhancer-star-rating {
   --osu-enhancer-star-color: #4290fb;
+  --osu-enhancer-star-text-color: #000;
   display: inline-flex;
   align-items: center;
   margin-left: 4px;
@@ -161,7 +162,7 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--osu-enhancer-star-text-color);
   white-space: nowrap;
   background: var(--osu-enhancer-star-color);
 }
@@ -1119,4 +1120,21 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   pointer-events: none;
   z-index: 1;
   box-sizing: border-box;
+}
+
+/* ---------- Profile v2 rank-count row (dark theme only) ---------- */
+
+/* The vendored izuki theme only knows the old profile layout: its plain
+   .profile-rank-count rule (flex, gap 4px, margin 0 from 900px up) is loaded
+   after osu's own and overrides the v2 variant (grid, gap 8px, margin auto),
+   so the grade row came out 176px wide instead of 192px and looked inset
+   against the card. Restore osu's own v2 layout; --rank-size: 16px still
+   comes from their .profile-rank-count--v2 rule, which the theme never sets. */
+html.osu-enhancer-dark .profile-rank-count.profile-rank-count--v2 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  justify-content: center;
+  margin: auto;
+  text-align: start;
 }

@@ -136,6 +136,7 @@
     // picker.js reads both instead of recomputing star ratings/colors
     // itself.
     beatmapsetHeader: '.beatmapset-header',
+    beatmapsetHeaderButtons: '.beatmapset-header__buttons',
     beatmapsetJson: '#json-beatmapset',
     beatmapPicker: '.beatmapset-beatmap-picker',
     beatmapPickerItem: '.beatmapset-beatmap-picker__beatmap',
