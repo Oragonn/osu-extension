@@ -1,7 +1,8 @@
 /**
- * In-page settings button, placed in osu!'s own top nav between "help" and
- * the search icon (per feedback — this replaces relying solely on the
- * browser-toolbar popup for day-to-day toggling). Medal toggles are
+ * In-page settings button, a floating action button pinned to the
+ * bottom-left corner of every osu! page (moved out of osu!'s own top nav
+ * per feedback — this replaces relying solely on the browser-toolbar popup
+ * for day-to-day toggling). Medal toggles are
  * deliberately excluded here; those are their own buttons on the Medals
  * section (see medals.js).
  */
@@ -9,7 +10,6 @@
   'use strict';
 
   const OsuEnhancer = (global.OsuEnhancer = global.OsuEnhancer || {});
-  const sel = OsuEnhancer.selectors;
   const {
     STORAGE_KEY: ROSU_STORAGE_KEY,
     DISMISSED_STORAGE_KEY: ROSU_DISMISSED_KEY,
@@ -62,94 +62,261 @@
     return { svg, badgeDot };
   }
 
-  const TOGGLE_DEFS = [
-    { key: 'darkTheme', label: 'Dark theme' },
-    { key: 'ppIfFc', label: 'PP if FC labels' },
-    { key: 'coverArt', label: 'Beatmap cover art' },
-    { key: 'playerCard', label: 'Downloadable player card' },
-    { key: 'pickerDiffNames', label: 'Difficulty names + star rating on picker' },
-    { key: 'listingMaxSr', label: 'Max star rating on listing cards' },
-    { key: 'coverDownloadButton', label: 'Cover download button on beatmap pages' },
-    { key: 'scoreAgeHighlight', label: 'Score age period highlight (Best Performance)' },
-    { key: 'profileAccentColor', label: 'Purple accent color on profile pages' },
-    { key: 'showLeaderboardRank', label: 'Player rank next to usernames (needs osu! API below)' },
+  // Grouped into tabs so the menu stays short no matter how many features
+  // pile up. `icon` is a plain text glyph drawn inside a tinted tile; `hue`
+  // tints that tile (and the card when the feature is on).
+  const TABS = [
+    {
+      id: 'look',
+      label: 'Look',
+      items: [
+        { key: 'darkTheme', icon: '◐', hue: 280, label: 'Dark theme', desc: 'Site-wide dark redesign' },
+        { key: 'profileAccentColor', icon: '◆', hue: 270, label: 'Purple accent', desc: 'Purple highlights on profile pages' },
+        { key: 'coverArt', icon: '▣', hue: 200, label: 'Cover art', desc: 'Beatmap covers behind score rows' },
+      ],
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      items: [
+        { key: 'ppIfFc', icon: '✦', hue: 330, label: 'PP if FC', desc: 'Full-combo pp shown on every score' },
+        { key: 'scoreAgeHighlight', icon: '◷', hue: 40, label: 'Score age highlight', desc: 'Colour Best Performance by score age' },
+        { key: 'targetRankCalculator', icon: '▲', hue: 150, label: 'Target rank calculator', desc: 'PP needed to reach rank #N' },
+        { key: 'ppPotential', icon: '≈', hue: 60, label: 'PP potential', desc: 'Near-FC plays (≤N misses) ranked by pp gained if FC’d' },
+        { key: 'playerCard', icon: '▤', hue: 190, label: 'Player card', desc: 'Downloadable profile card image' },
+        { key: 'showLeaderboardRank', icon: '#', hue: 10, label: 'Rank next to names', desc: 'Needs osu! API keys (Data tab)' },
+      ],
+    },
+    {
+      id: 'beatmaps',
+      label: 'Beatmaps',
+      items: [
+        { key: 'pickerDiffNames', icon: '≡', hue: 220, label: 'Difficulty names', desc: 'Names + star rating on the picker' },
+        { key: 'listingMaxSr', icon: '★', hue: 45, label: 'Max star rating', desc: 'Highest SR chip on listing cards' },
+        { key: 'coverDownloadButton', icon: '↓', hue: 170, label: 'Cover download', desc: 'Save full-size covers + copy artist - title' },
+        { key: 'beatmapPpCalculator', icon: 'ƒ', hue: 195, label: 'PP calculator', desc: 'PP for a hypothetical mods/acc/combo score' },
+      ],
+    },
+    { id: 'data', label: 'Data', items: [] },
   ];
 
-  function buildPanel(toggles) {
-    const panel = document.createElement('div');
-    panel.className = 'osu-enhancer-settings-panel';
-    panel.hidden = true;
+  const MODE_OPTIONS = [
+    ['osu', 'osu!'],
+    ['taiko', 'taiko'],
+    ['fruits', 'catch'],
+    ['mania', 'mania'],
+  ];
 
-    const title = document.createElement('div');
-    title.className = 'osu-enhancer-settings-panel__title';
-    title.textContent = 'osu! Enhancer';
-    panel.appendChild(title);
+  const ALL_BOOLEAN_KEYS = TABS.flatMap((tab) => tab.items.map((item) => item.key));
+  const TAB_STORAGE_KEY = 'osuEnhancerMenuTab';
 
-    TOGGLE_DEFS.forEach(({ key, label }) => {
-      const row = document.createElement('label');
-      row.className = 'osu-enhancer-settings-panel__row';
-
-      const text = document.createElement('span');
-      text.textContent = label;
-
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = !!toggles[key];
-      input.addEventListener('change', () => OsuEnhancer.storage.setToggle(key, input.checked));
-
-      const switchEl = document.createElement('span');
-      switchEl.className = 'osu-enhancer-settings-panel__switch';
-
-      row.appendChild(text);
-      row.appendChild(input);
-      row.appendChild(switchEl);
-      panel.appendChild(row);
-    });
-
-    // Not boolean toggles (like medalFilter, these get bespoke UI rather
-    // than being forced into TOGGLE_DEFS's checkbox loop above).
-    panel.appendChild(
-      buildSelectRow('Default mode on beatmap listing', 'defaultBeatmapMode', toggles, [
-        ['osu', 'osu!'],
-        ['taiko', 'osu!taiko'],
-        ['fruits', 'osu!catch'],
-        ['mania', 'osu!mania'],
-        ['any', 'Any (no default)'],
-      ])
-    );
-    panel.appendChild(
-      buildSelectRow('PP calculation engine', 'ppEngine', toggles, [
-        ['rosu', 'rosu-pp (bundled)'],
-        ['official', 'Official game code (ppy)'],
-      ])
-    );
-
-    panel.appendChild(buildApiCredentialsSection(toggles));
-
-    return panel;
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
   }
 
-  function buildSelectRow(label, key, toggles, options) {
-    const row = document.createElement('label');
-    row.className = 'osu-enhancer-settings-panel__row osu-enhancer-settings-panel__row--select';
+  function buildPanel(toggles) {
+    const panel = el('div', 'osu-enhancer-settings-panel');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'osu! Enhancer settings');
 
-    const text = document.createElement('span');
-    text.textContent = label;
+    // ---- Header: gradient hero with a live "N of M on" counter + meter.
+    const header = el('div', 'osu-enhancer-menu__header');
+    const brand = el('div', 'osu-enhancer-menu__brand');
+    brand.appendChild(el('span', 'osu-enhancer-menu__logo', 'osu!'));
+    brand.appendChild(el('span', 'osu-enhancer-menu__name', 'Enhancer'));
+    header.appendChild(brand);
+    const counter = el('div', 'osu-enhancer-menu__counter');
+    header.appendChild(counter);
+    const meter = el('div', 'osu-enhancer-menu__meter');
+    const meterFill = el('div', 'osu-enhancer-menu__meter-fill');
+    meter.appendChild(meterFill);
+    header.appendChild(meter);
+    panel.appendChild(header);
 
-    const select = document.createElement('select');
-    select.className = 'osu-enhancer-settings-panel__select';
-    options.forEach(([value, optionLabel]) => {
-      const option = document.createElement('option');
-      option.value = value;
-      option.textContent = optionLabel;
-      select.appendChild(option);
+    const noticeSlot = el('div', 'osu-enhancer-menu__notice-slot');
+    panel.appendChild(noticeSlot);
+
+    function refreshCounter() {
+      const on = ALL_BOOLEAN_KEYS.filter((key) => toggles[key]).length;
+      counter.textContent = `${on} of ${ALL_BOOLEAN_KEYS.length} features on`;
+      meterFill.style.width = `${(on / ALL_BOOLEAN_KEYS.length) * 100}%`;
+    }
+
+    // ---- Tabs, with a sliding pill indicator under the active one.
+    const tabBar = el('div', 'osu-enhancer-menu__tabs');
+    tabBar.setAttribute('role', 'tablist');
+    const indicator = el('span', 'osu-enhancer-menu__tab-indicator');
+    indicator.style.width = `calc((100% - 8px) / ${TABS.length})`;
+    tabBar.appendChild(indicator);
+    panel.appendChild(tabBar);
+
+    const body = el('div', 'osu-enhancer-menu__body');
+    panel.appendChild(body);
+
+    const tabButtons = [];
+    const pages = [];
+    const cards = {};
+
+    function selectTab(index) {
+      tabButtons.forEach((b, i) => {
+        b.classList.toggle('osu-enhancer-menu__tab--active', i === index);
+        b.setAttribute('aria-selected', String(i === index));
+      });
+      pages.forEach((p, i) => (p.hidden = i !== index));
+      indicator.style.transform = `translateX(${index * 100}%)`;
+      body.scrollTop = 0;
+      try {
+        localStorage.setItem(TAB_STORAGE_KEY, String(index));
+      } catch (err) {
+        // Storage blocked — the tab just won't be remembered.
+      }
+    }
+
+    TABS.forEach((tab, index) => {
+      const tabBtn = el('button', 'osu-enhancer-menu__tab', tab.label);
+      tabBtn.type = 'button';
+      tabBtn.setAttribute('role', 'tab');
+      tabBtn.addEventListener('click', () => selectTab(index));
+      tabBar.appendChild(tabBtn);
+      tabButtons.push(tabBtn);
+
+      const page = el('div', 'osu-enhancer-menu__page');
+      page.setAttribute('role', 'tabpanel');
+      tab.items.forEach((item, i) => {
+        const entry = buildFeatureCard(item, toggles, refreshCounter);
+        entry.card.style.animationDelay = `${i * 35}ms`;
+        cards[item.key] = entry;
+        page.appendChild(entry.card);
+      });
+      if (tab.id === 'beatmaps') {
+        page.appendChild(
+          buildSegmented('Default mode on beatmap listing', 'defaultBeatmapMode', toggles, [...MODE_OPTIONS, ['any', 'any']])
+        );
+      }
+      if (tab.id === 'data') {
+        page.appendChild(
+          buildSegmented('PP calculation engine', 'ppEngine', toggles, [
+            ['rosu', 'rosu-pp'],
+            ['official', 'Official (ppy)'],
+          ])
+        );
+        page.appendChild(buildApiCredentialsSection(toggles));
+        page.appendChild(buildCountrySnapshotSection());
+      }
+      body.appendChild(page);
+      pages.push(page);
     });
-    select.value = toggles[key] || options[0][0];
-    select.addEventListener('change', () => OsuEnhancer.storage.setToggle(key, select.value));
 
-    row.appendChild(text);
-    row.appendChild(select);
-    return row;
+    let initialTab = 0;
+    try {
+      initialTab = Math.min(TABS.length - 1, Number(localStorage.getItem(TAB_STORAGE_KEY)) || 0);
+    } catch (err) {
+      // Fall back to the first tab.
+    }
+    selectTab(initialTab);
+    refreshCounter();
+
+    // ---- Footer
+    const footer = el('div', 'osu-enhancer-menu__footer');
+    footer.appendChild(el('span', 'osu-enhancer-menu__live-dot'));
+    footer.appendChild(el('span', null, 'Changes apply instantly'));
+    footer.appendChild(el('span', 'osu-enhancer-menu__version', `v${chrome.runtime.getManifest().version}`));
+    panel.appendChild(footer);
+
+    // Stay in sync with the toolbar popup (same storage keys).
+    OsuEnhancer.storage.onToggleChange((key, value) => {
+      if (!(key in cards)) return;
+      toggles[key] = value;
+      cards[key].input.checked = !!value;
+      cards[key].card.classList.toggle('osu-enhancer-menu__card--on', !!value);
+      refreshCounter();
+    });
+
+    return { panel, noticeSlot };
+  }
+
+  function buildFeatureCard(item, toggles, onChange) {
+    const card = el('label', 'osu-enhancer-menu__card');
+    card.style.setProperty('--oe-hue', item.hue);
+    card.classList.toggle('osu-enhancer-menu__card--on', !!toggles[item.key]);
+
+    card.appendChild(el('span', 'osu-enhancer-menu__icon', item.icon));
+
+    const text = el('span', 'osu-enhancer-menu__card-text');
+    text.appendChild(el('span', 'osu-enhancer-menu__card-title', item.label));
+    text.appendChild(el('span', 'osu-enhancer-menu__card-desc', item.desc));
+    card.appendChild(text);
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = !!toggles[item.key];
+    input.addEventListener('change', () => {
+      toggles[item.key] = input.checked;
+      card.classList.toggle('osu-enhancer-menu__card--on', input.checked);
+      OsuEnhancer.storage.setToggle(item.key, input.checked);
+      onChange();
+    });
+    card.appendChild(input);
+    card.appendChild(el('span', 'osu-enhancer-menu__switch'));
+
+    return { card, input };
+  }
+
+  // Pill-style segmented control instead of a native <select>.
+  function buildSegmented(label, key, toggles, options) {
+    const group = el('div', 'osu-enhancer-menu__group');
+    group.appendChild(el('div', 'osu-enhancer-menu__group-label', label));
+    const seg = el('div', 'osu-enhancer-menu__segmented');
+    seg.setAttribute('role', 'radiogroup');
+    const current = toggles[key] || options[0][0];
+    const buttons = options.map(([value, optionLabel]) => {
+      const b = el('button', 'osu-enhancer-menu__seg-btn', optionLabel);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.dataset.value = value;
+      seg.appendChild(b);
+      return b;
+    });
+    function mark(value) {
+      buttons.forEach((b) => {
+        const on = b.dataset.value === value;
+        b.classList.toggle('osu-enhancer-menu__seg-btn--active', on);
+        b.setAttribute('aria-checked', String(on));
+      });
+    }
+    buttons.forEach((b) =>
+      b.addEventListener('click', () => {
+        mark(b.dataset.value);
+        OsuEnhancer.storage.setToggle(key, b.dataset.value);
+      })
+    );
+    mark(current);
+    OsuEnhancer.storage.onToggleChange((changedKey, value) => {
+      if (changedKey === key) mark(value);
+    });
+    group.appendChild(seg);
+    return group;
+  }
+
+  function buildField(labelText, input) {
+    const field = el('label', 'osu-enhancer-menu__field');
+    field.appendChild(el('span', 'osu-enhancer-menu__field-label', labelText));
+    field.appendChild(input);
+    return field;
+  }
+
+  function buildTextInput(type, value, placeholder) {
+    const input = document.createElement('input');
+    input.type = type;
+    input.className = 'osu-enhancer-menu__input';
+    input.value = value || '';
+    if (placeholder) input.placeholder = placeholder;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    return input;
   }
 
   // For the "DT only" leaderboard button (src/leaderboard-mod-filter.js) —
@@ -158,38 +325,113 @@
   // just use a shared key). Free, one-time setup, no redirect URL needed
   // since this only ever uses the client-credentials grant.
   function buildApiCredentialsSection(toggles) {
-    const section = document.createElement('div');
-    section.className = 'osu-enhancer-settings-panel__api-section';
-
-    const heading = document.createElement('div');
-    heading.className = 'osu-enhancer-settings-panel__api-heading';
-    heading.textContent = 'osu! API';
-    section.appendChild(heading);
-
+    const group = el('div', 'osu-enhancer-menu__group');
+    group.appendChild(el('div', 'osu-enhancer-menu__group-label', 'osu! API credentials'));
     [
       { key: 'osuApiClientId', label: 'Client ID', type: 'text' },
       { key: 'osuApiClientSecret', label: 'Client secret', type: 'password' },
     ].forEach(({ key, label, type }) => {
-      const row = document.createElement('label');
-      row.className = 'osu-enhancer-settings-panel__api-row';
-
-      const text = document.createElement('span');
-      text.textContent = label;
-
-      const input = document.createElement('input');
-      input.type = type;
-      input.className = 'osu-enhancer-settings-panel__api-input';
-      input.value = toggles[key] || '';
-      input.autocomplete = 'off';
-      input.spellcheck = false;
+      const input = buildTextInput(type, toggles[key]);
       input.addEventListener('change', () => OsuEnhancer.storage.setToggle(key, input.value.trim()));
+      group.appendChild(buildField(label, input));
+    });
+    return group;
+  }
 
-      row.appendChild(text);
-      row.appendChild(input);
-      section.appendChild(row);
+  // A country with more ranked players than the global #10,000 cap covers
+  // (most do) has that same cap on its own rankings list — but a one-time
+  // full walk of all 200 of its pages (instead of the 5-page live sample
+  // src/target-rank.js normally uses) gives the target-rank calculator a
+  // much richer, persistent real dataset for that country, stored in
+  // chrome.storage.local until manually refreshed here. Takes a couple of
+  // minutes (200 requests, paced the same as the live sample) since it's a
+  // real batch job, not something to run automatically or on every page
+  // load — see src/target-rank.js's fetchFullCountryRankings for the pacing
+  // rationale.
+  function formatSnapshotAge(fetchedAt) {
+    const ageMs = Date.now() - fetchedAt;
+    const days = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+    if (days < 1) return 'today';
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
+  }
+
+  function buildCountrySnapshotSection() {
+    const group = el('div', 'osu-enhancer-menu__group');
+    group.appendChild(el('div', 'osu-enhancer-menu__group-label', 'Rank data (target rank calculator)'));
+
+    const row = el('div', 'osu-enhancer-menu__field-row');
+    const countryInput = buildTextInput('text', '', 'FR');
+    countryInput.maxLength = 2;
+    countryInput.classList.add('osu-enhancer-menu__input--country');
+    row.appendChild(buildField('Country', countryInput));
+
+    const modeSelect = document.createElement('select');
+    modeSelect.className = 'osu-enhancer-menu__input';
+    MODE_OPTIONS.forEach(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      modeSelect.appendChild(option);
+    });
+    row.appendChild(buildField('Mode', modeSelect));
+    group.appendChild(row);
+
+    const fetchBtn = el('button', 'osu-enhancer-menu__fetch-btn', 'Fetch all rankings');
+    fetchBtn.type = 'button';
+    group.appendChild(fetchBtn);
+
+    const progress = el('div', 'osu-enhancer-menu__progress');
+    const progressFill = el('div', 'osu-enhancer-menu__progress-fill');
+    progress.appendChild(progressFill);
+    progress.hidden = true;
+    group.appendChild(progress);
+
+    const status = el('div', 'osu-enhancer-menu__status');
+    group.appendChild(status);
+
+    async function refreshStatus() {
+      const countryCode = countryInput.value.trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(countryCode)) {
+        status.textContent = '';
+        return;
+      }
+      const snapshot = await OsuEnhancer.targetRank.getCountrySnapshot(modeSelect.value, countryCode);
+      status.textContent = snapshot
+        ? `Stored: ${snapshot.points.length.toLocaleString()} entries for ${countryCode}, fetched ${formatSnapshotAge(snapshot.fetchedAt)}.`
+        : `No stored data yet for ${countryCode}.`;
+    }
+    countryInput.addEventListener('input', refreshStatus);
+    modeSelect.addEventListener('change', refreshStatus);
+
+    fetchBtn.addEventListener('click', async () => {
+      const countryCode = countryInput.value.trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(countryCode)) {
+        status.textContent = 'Enter a valid 2-letter country code (e.g. FR).';
+        return;
+      }
+      fetchBtn.disabled = true;
+      fetchBtn.textContent = 'Fetching…';
+      progress.hidden = false;
+      progressFill.style.width = '0%';
+      status.textContent = 'Starting… this takes a couple of minutes.';
+      try {
+        const points = await OsuEnhancer.targetRank.fetchAndStoreCountrySnapshot(modeSelect.value, countryCode, (page, total, count) => {
+          progressFill.style.width = `${(page / total) * 100}%`;
+          status.textContent = `Page ${page}/${total} · ${count.toLocaleString()} entries`;
+        });
+        progressFill.style.width = '100%';
+        status.textContent = `Done — stored ${points.length.toLocaleString()} entries for ${countryCode} (${modeSelect.value}).`;
+      } catch (err) {
+        status.textContent = 'Fetch failed — try again.';
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = 'Fetch all rankings';
+        setTimeout(() => (progress.hidden = true), 1500);
+      }
     });
 
-    return section;
+    return group;
   }
 
   function getRosuUpdateStatus() {
@@ -200,7 +442,7 @@
 
   function buildRosuNotice(status) {
     const notice = document.createElement('a');
-    notice.className = 'osu-enhancer-settings-panel__notice';
+    notice.className = 'osu-enhancer-menu__notice';
     notice.href = NPM_PACKAGE_URL;
     notice.target = '_blank';
     notice.rel = 'noopener noreferrer';
@@ -208,16 +450,11 @@
     return notice;
   }
 
-  function applyRosuUpdateStatus(badgeDot, panel, status) {
-    const existingNotice = panel.querySelector('.osu-enhancer-settings-panel__notice');
-    if (existingNotice) existingNotice.remove();
-
+  function applyRosuUpdateStatus(badgeDot, noticeSlot, status) {
+    noticeSlot.textContent = '';
     const hasUpdate = !!(status && status.updateAvailable);
     badgeDot.style.display = hasUpdate ? '' : 'none';
-    if (!hasUpdate) return;
-
-    const title = panel.querySelector('.osu-enhancer-settings-panel__title');
-    title.after(buildRosuNotice(status));
+    if (hasUpdate) noticeSlot.appendChild(buildRosuNotice(status));
   }
 
   // How long a dismissed banner stays hidden before resurfacing (per
@@ -313,59 +550,61 @@
     });
   }
 
-  function findInsertionPoint() {
-    const searchLink = document.querySelector(sel.navSearchLink);
-    if (searchLink) {
-      const col = searchLink.closest(sel.navCol);
-      return { host: (col || searchLink).parentElement, before: col || searchLink };
-    }
-    const colGroup = document.querySelector(sel.navMenuColGroup);
-    if (colGroup) return { host: colGroup, before: null };
-    return null;
-  }
-
   async function init() {
     initUpdateBanner();
 
-    if (document.querySelector('.osu-enhancer-nav-col')) return;
-    const insertion = findInsertionPoint();
-    if (!insertion || !insertion.host) return;
+    if (document.querySelector('.osu-enhancer-fab') || !document.body) return;
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'nav2__col nav2__col--menu osu-enhancer-nav-col';
+    wrapper.className = 'osu-enhancer-fab';
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'osu-enhancer-nav-btn';
+    btn.className = 'osu-enhancer-fab__btn';
     btn.setAttribute('aria-label', 'osu! Enhancer settings');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.title = 'osu! Enhancer settings';
     const { svg, badgeDot } = buildGearIcon();
+    svg.setAttribute('width', '24');
+    svg.setAttribute('height', '24');
     btn.appendChild(svg);
-    wrapper.appendChild(btn);
 
     const toggles = await OsuEnhancer.storage.getToggles();
-    const panel = buildPanel(toggles);
+    // Visibility is driven by the --open class so opening/closing can animate.
+    const { panel, noticeSlot } = buildPanel(toggles);
     wrapper.appendChild(panel);
+    wrapper.appendChild(btn);
 
+    function setOpen(open) {
+      wrapper.classList.toggle('osu-enhancer-fab--open', open);
+      btn.setAttribute('aria-expanded', String(open));
+    }
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      panel.hidden = !panel.hidden;
+      setOpen(!wrapper.classList.contains('osu-enhancer-fab--open'));
     });
-    document.addEventListener('click', (e) => {
-      if (!wrapper.contains(e.target)) panel.hidden = true;
+    // Closing requires both the press and the release to land outside the
+    // panel, so selecting text inside and releasing the mouse outside it
+    // (e.g. over the page) doesn't close the panel mid-selection.
+    let outsidePointerDown = false;
+    document.addEventListener('mousedown', (e) => {
+      outsidePointerDown = !wrapper.contains(e.target);
+    });
+    document.addEventListener('mouseup', (e) => {
+      if (outsidePointerDown && !wrapper.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setOpen(false);
     });
 
-    applyRosuUpdateStatus(badgeDot, panel, await getRosuUpdateStatus());
+    applyRosuUpdateStatus(badgeDot, noticeSlot, await getRosuUpdateStatus());
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local' && changes[ROSU_STORAGE_KEY]) {
-        applyRosuUpdateStatus(badgeDot, panel, changes[ROSU_STORAGE_KEY].newValue);
+        applyRosuUpdateStatus(badgeDot, noticeSlot, changes[ROSU_STORAGE_KEY].newValue);
       }
     });
 
-    if (insertion.before) {
-      insertion.host.insertBefore(wrapper, insertion.before);
-    } else {
-      insertion.host.appendChild(wrapper);
-    }
+    document.body.appendChild(wrapper);
   }
 
   OsuEnhancer.settingsPanel = { init };

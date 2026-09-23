@@ -18,6 +18,14 @@
     coverDownloadButton: true, // download-cover button on beatmapset pages
     scoreAgeHighlight: true, // score age period highlight on profile Best Performance
     profileAccentColor: false, // purple site accent (nav underline, hover highlights, ...) on profile pages
+    targetRankCalculator: true, // "how much pp for rank #N" button next to Global/Country Ranking
+    ppPotential: true, // profile-page panel: Best Performance scores re-ranked by pp gain if misses were <= N
+    ppPotentialLastMisses: 5, // last "<= misses" value entered in that panel, remembered across sessions
+    beatmapPpCalculator: true, // beatmap-page panel: pp for a hypothetical score (mods/acc/combo/misses) on the open difficulty
+    beatmapPpCalcLastAccuracy: 100, // last accuracy % entered in that panel, remembered across sessions
+    beatmapPpCalcLastRuleset: 'lazer', // 'lazer' | 'stable' — last ruleset picked in that panel, remembered across sessions
+    ppPotentialLastSortKey: 'gain', // last sort column picked in the PP potential panel ('current' | 'potential' | 'gain' | 'misses')
+    ppPotentialLastSortDir: 'desc', // 'asc' | 'desc' — sort direction paired with ppPotentialLastSortKey
     defaultBeatmapMode: 'osu', // 'osu' | 'taiko' | 'fruits' | 'mania' | 'any' — Mode filter preselected on /beatmapsets; 'any' leaves osu!'s own default
     medalFilter: 'all', // 'all' | 'completed' | 'missing'
     ppEngine: 'rosu', // 'rosu' | 'official'

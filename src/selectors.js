@@ -40,6 +40,26 @@
     scoreRankPill: '.score-rank',
     profileStatsEntry: '[class*="profile-stats__entry"]',
     profileBar: '.profile-bar',
+    // Global/country rank pair on the current profile_detail_v2 layout —
+    // confirmed live 2026-09-23 (with that preference actually enabled via
+    // `osuCore.userPreferences.set('profile_detail_v2', true)` — testing
+    // logged out/without it shows a completely different, older layout with
+    // no `--solo` wrapper at all and only 2 `.value-display--rank` on the
+    // whole page instead of 5, which looks superficially similar but isn't
+    // what a v2 viewer actually sees): `.profile-detail-stats-card--solo
+    // .value-display--rank` matches exactly 2 elements, global first then
+    // country, regardless of viewer locale (the matchmaking/other-ruleset
+    // cards reuse `.value-display--rank` too, but only inside their own
+    // `.profile-detail-stats-card` variants, not `--solo`).
+    profileStatsCardSolo: '.profile-detail-stats-card--solo',
+    profileRankDisplay: '.value-display--rank',
+    // React hydration payload osu-web embeds on every profile page load —
+    // `JSON.parse(el.dataset.initialData).user` gives exact
+    // `statistics.pp`/`statistics.global_rank`/`statistics.country_rank`/
+    // `country.code` for whichever ruleset the page loaded, no DOM-text
+    // scraping (and no locale parsing) needed. Same pattern as
+    // `scoreDetailJson` below.
+    profileInitialData: '.js-react[data-initial-data]',
 
     // Tab bar (info / modding / playlists / multiplayer / ranked play).
     profileTabs: '.header-nav-v4',
@@ -85,12 +105,6 @@
     // to the front via `order: -1` and leaves this and `.play-detail__pp` at
     // their natural `order: 0`, so it always renders directly between them.
     scoreRowScoreDetail: '.play-detail__score-detail',
-
-    // Top nav — used to place the in-page settings button between "help"
-    // and the search icon.
-    navCol: '.nav2__col',
-    navMenuColGroup: '.nav2__colgroup--menu',
-    navSearchLink: '.nav2__menu-link-main--search',
 
     // Individual score permalink page (/scores/<id>), confirmed live: the
     // acc/max-combo/pp trio is the first ".score-stats__group-row" inside

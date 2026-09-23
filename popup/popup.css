@@ -146,7 +146,8 @@ body {
   cursor: default;
 }
 
-.api-section__row input {
+.api-section__row input,
+.api-section__row select {
   flex: 1;
   min-width: 0;
   background: #26263a;
@@ -155,6 +156,35 @@ body {
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 12px;
+}
+
+.fetch-btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #ffce54;
+  background: transparent;
+  color: #ffce54;
+  cursor: pointer;
+}
+
+.fetch-btn:hover {
+  background: rgba(255, 206, 84, 0.14);
+}
+
+.fetch-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fetch-status {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #9a9ab0;
 }
 
 .popup__footer {

@@ -44,6 +44,16 @@
       <span class="toggle__switch"></span>
     </label>
     <label class="toggle">
+      <span>Cover download + copy name buttons on beatmap pages</span>
+      <input type="checkbox" data-toggle="coverDownloadButton" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
+      <span>PP calculator on beatmap pages</span>
+      <input type="checkbox" data-toggle="beatmapPpCalculator" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
       <span>Score age period highlight (Best Performance)</span>
       <input type="checkbox" data-toggle="scoreAgeHighlight" />
       <span class="toggle__switch"></span>
@@ -51,6 +61,16 @@
     <label class="toggle">
       <span>Purple accent color on profile pages</span>
       <input type="checkbox" data-toggle="profileAccentColor" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
+      <span>Target rank pp calculator on profile page</span>
+      <input type="checkbox" data-toggle="targetRankCalculator" />
+      <span class="toggle__switch"></span>
+    </label>
+    <label class="toggle">
+      <span>PP potential panel on profile page</span>
+      <input type="checkbox" data-toggle="ppPotential" />
       <span class="toggle__switch"></span>
     </label>
     <label class="toggle">
@@ -88,16 +108,36 @@
         <input type="password" data-api-toggle="osuApiClientSecret" autocomplete="off" spellcheck="false" />
       </label>
     </div>
+    <div class="api-section">
+      <div class="api-section__heading">Rank data (target rank calculator)</div>
+      <label class="api-section__row">
+        <span>Country code</span>
+        <input type="text" id="snapshotCountry" maxlength="2" placeholder="e.g. FR" autocomplete="off" spellcheck="false" />
+      </label>
+      <label class="api-section__row">
+        <span>Mode</span>
+        <select id="snapshotMode">
+          <option value="osu">osu!</option>
+          <option value="taiko">osu!taiko</option>
+          <option value="fruits">osu!catch</option>
+          <option value="mania">osu!mania</option>
+        </select>
+      </label>
+      <button type="button" class="fetch-btn" id="snapshotFetch">Fetch all rankings</button>
+      <div class="fetch-status" id="snapshotStatus"></div>
+    </div>
   </main>
 
   <footer class="popup__footer">
     Changes apply instantly — no refresh needed.<br />
     Medal toggles live as buttons on the Medals page. A ⚙ settings button
-    also appears in osu!'s own nav bar next to search.
+    also floats in the bottom-left corner of every osu! page.
   </footer>
 
   <script src="../src/storage.js"></script>
   <script src="../src/rosu-update-shared.js"></script>
+  <script src="../src/selectors.js"></script>
+  <script src="../src/target-rank.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

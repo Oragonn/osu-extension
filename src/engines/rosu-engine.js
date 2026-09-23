@@ -223,11 +223,58 @@
     return maxComboCache.get(beatmapId);
   }
 
+  // beatmapId -> Promise<{maxCombo, nObjects, nSliders, nLargeTicks} | null>.
+  // Same shape of cache as calculateMaxCombo above (mod-independent, so
+  // cached once per beatmap) — kept as its own cache/call instead of
+  // extending calculateMaxCombo's so that function's existing callers and
+  // cache contract stay untouched. Feeds src/beatmap-pp-calculator.js's
+  // "fill in the real max instead of leaving 0/blank" defaults for the
+  // 300 count and the lazer-only slider-end/large-tick fields.
+  const objectCountsCache = new Map();
+
+  /**
+   * The beatmap's own object/judgement ceilings (independent of mods/score):
+   * total hit objects (a full-300 default), slider count (= max slider-end
+   * hits, one per slider) and max large-tick hits. No equivalent exists here
+   * for small-tick hits — rosu-pp-js doesn't expose a beatmap-level count for
+   * those, only the per-performance-calculation hit total.
+   */
+  async function calculateObjectCounts(beatmapId) {
+    if (!objectCountsCache.has(beatmapId)) {
+      const promise = (async () => {
+        const map = await getBeatmap(beatmapId);
+        if (!map) return null;
+        try {
+          const diff = new global.RosuPP.Difficulty({});
+          const attrs = diff.calculate(map);
+          const counts = {
+            maxCombo: attrs.maxCombo,
+            nObjects: attrs.nObjects,
+            nSliders: attrs.nSliders,
+            nLargeTicks: attrs.nLargeTicks,
+          };
+          attrs.free && attrs.free();
+          return counts;
+        } catch (err) {
+          console.warn('[osu-enhancer] object count calculation failed', beatmapId, err);
+          return null;
+        }
+      })();
+      objectCountsCache.set(beatmapId, promise);
+      promise.then(
+        (counts) => { if (!counts) objectCountsCache.delete(beatmapId); },
+        () => objectCountsCache.delete(beatmapId)
+      );
+    }
+    return objectCountsCache.get(beatmapId);
+  }
+
   OsuEnhancer.engines.rosu = {
     init,
     getBeatmap,
     calculatePp,
     calculateStarRating,
     calculateMaxCombo,
+    calculateObjectCounts,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

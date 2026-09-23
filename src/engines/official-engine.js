@@ -316,11 +316,26 @@
     return d ? d.maxCombo : null;
   }
 
+  /**
+   * Same shape as rosu-engine.js's calculateObjectCounts, for
+   * src/beatmap-pp-calculator.js's shared "fill in the real max" defaults —
+   * nSliders/nLargeTicks come back null here since this bridge's compiled
+   * output doesn't currently surface a slider/large-tick breakdown the way
+   * rosu-pp-js's DifficultyAttributes does (would need a rebuild of the
+   * vendored WASM in lib/osu-ruleset-bridge/, not just this source file).
+   */
+  async function calculateObjectCounts(beatmapId) {
+    const d = await getModIndependentDifficulty(beatmapId);
+    if (!d) return null;
+    return { maxCombo: d.maxCombo, nObjects: d.totalHits, nSliders: null, nLargeTicks: null };
+  }
+
   OsuEnhancer.engines.official = {
     init,
     getBeatmap,
     calculatePp,
     calculateStarRating,
     calculateMaxCombo,
+    calculateObjectCounts,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

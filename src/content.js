@@ -14,6 +14,9 @@
     scores,
     scoreDetail,
     profile,
+    targetRank,
+    ppPotential,
+    beatmapPpCalculator,
     medals,
     playerCard,
     settingsPanel,
@@ -29,33 +32,73 @@
   let currentToggles = null;
   let rescanQueued = false;
 
+  // Each step runs in isolation: osu!'s SPA route swap can leave this pass
+  // reading DOM that's mid-render (a header present but its children not
+  // yet populated, a script tag not yet swapped in, ...), and any one
+  // feature tripping over that used to throw and silently kill every call
+  // after it for this pass — including beatmapPpCalculator.apply() at the
+  // very end, which is how its corner button could go a full rescan cycle
+  // without being added/removed after a profile<->beatmapset transition.
+  // Isolating each call means a transient failure only costs that one
+  // feature this pass; queueRescan()'s later retries pick it back up the
+  // same as any other idempotent no-op.
+  function runStep(label, fn) {
+    try {
+      fn();
+    } catch (err) {
+      console.warn(`[osu! Enhancer] ${label} failed`, err);
+    }
+  }
+
   function applyStaticToggles(toggles) {
-    theme.setEnabled(toggles.darkTheme);
-    medals.applyMedalFilter(toggles.medalFilter);
-    medals.setHideMedalPopup(toggles.medalFilter !== 'all');
-    medals.injectMedalControls(toggles);
-    settingsPanel.init();
-    scores.applyRankNumbers();
-    modeFilter.applyDefaultMode(toggles.defaultBeatmapMode);
-    leaderboardModFilter.refresh();
-    beatmapPicker.apply(toggles.pickerDiffNames);
-    beatmapCoverDownload.apply(toggles.coverDownloadButton);
-    maxSrChip.apply(toggles.listingMaxSr);
-    scoreAgeHighlight.apply(toggles.scoreAgeHighlight);
-    profileAccentColor.apply(toggles.profileAccentColor);
+    runStep('theme', () => theme.setEnabled(toggles.darkTheme));
+    runStep('medals', () => {
+      medals.applyMedalFilter(toggles.medalFilter);
+      medals.setHideMedalPopup(toggles.medalFilter !== 'all');
+      medals.injectMedalControls(toggles);
+    });
+    runStep('settingsPanel', () => settingsPanel.init());
+    runStep('scores.applyRankNumbers', () => scores.applyRankNumbers());
+    runStep('modeFilter', () => modeFilter.applyDefaultMode(toggles.defaultBeatmapMode));
+    runStep('leaderboardModFilter', () => leaderboardModFilter.refresh());
+    runStep('beatmapPicker', () => beatmapPicker.apply(toggles.pickerDiffNames));
+    runStep('beatmapCoverDownload', () => beatmapCoverDownload.apply(toggles.coverDownloadButton));
+    runStep('maxSrChip', () => maxSrChip.apply(toggles.listingMaxSr));
+    runStep('scoreAgeHighlight', () => scoreAgeHighlight.apply(toggles.scoreAgeHighlight));
+    runStep('profileAccentColor', () => profileAccentColor.apply(toggles.profileAccentColor));
 
-    if (profile.isProfilePage() && toggles.playerCard) {
-      profile.renderPlayerCardButton(() => playerCard.downloadPlayerCard());
-    } else {
-      profile.removePlayerCardButton();
-    }
+    runStep('playerCard', () => {
+      if (profile.isProfilePage() && toggles.playerCard) {
+        profile.renderPlayerCardButton(() => playerCard.downloadPlayerCard());
+      } else {
+        profile.removePlayerCardButton();
+      }
+    });
 
-    if (profile.isProfilePage()) {
-      profile.renderNoopButton();
-      profile.injectStickyToolbarStripes();
-    } else {
-      profile.removeNoopButton();
-    }
+    runStep('ppPotential', () => {
+      if (profile.isProfilePage()) {
+        profile.injectStickyToolbarStripes();
+        if (toggles.ppPotential) {
+          profile.renderPpPotentialButton(() => ppPotential.toggle());
+        } else {
+          profile.removePpPotentialButton();
+          ppPotential.close();
+        }
+      } else {
+        profile.removePpPotentialButton();
+        ppPotential.close();
+      }
+    });
+
+    runStep('targetRank', () => {
+      if (profile.isProfilePage() && toggles.targetRankCalculator) {
+        targetRank.render();
+      } else {
+        targetRank.remove();
+      }
+    });
+
+    runStep('beatmapPpCalculator', () => beatmapPpCalculator.apply(toggles.beatmapPpCalculator));
   }
 
   async function runScoreFeatures(toggles) {
@@ -163,6 +206,21 @@
       scoreAgeHighlight.apply(value);
     } else if (key === 'profileAccentColor') {
       profileAccentColor.apply(value);
+    } else if (key === 'targetRankCalculator') {
+      if (profile.isProfilePage() && value) {
+        targetRank.render();
+      } else {
+        targetRank.remove();
+      }
+    } else if (key === 'ppPotential') {
+      if (profile.isProfilePage() && value) {
+        profile.renderPpPotentialButton(() => ppPotential.toggle());
+      } else {
+        profile.removePpPotentialButton();
+        ppPotential.close();
+      }
+    } else if (key === 'beatmapPpCalculator') {
+      beatmapPpCalculator.apply(value);
     }
   });
 

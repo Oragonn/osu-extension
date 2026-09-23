@@ -1,8 +1,8 @@
 /**
  * Profile-page features: the "Download Player Card" button hookup (US-009)
- * and a top-right corner button (no behavior — placeholder). Dark
- * restyling of the info tab itself (US-004) is handled entirely by
- * styles/theme.css against the confirmed .profile-info /
+ * and the "PP potential" corner button, which opens the panel built by
+ * src/pp-potential.js. Dark restyling of the info tab itself (US-004) is
+ * handled entirely by styles/theme.css against the confirmed .profile-info /
  * .profile-detail-stats selectors.
  */
 (function (global) {
@@ -47,17 +47,20 @@
     if (btn) btn.remove();
   }
 
-  function renderNoopButton() {
-    if (document.querySelector('.osu-enhancer-noop-btn')) return;
-    const btn = document.createElement('button');
+  function renderPpPotentialButton(onClick) {
+    let btn = document.querySelector('.osu-enhancer-pp-potential-btn');
+    if (btn) return;
+    btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'osu-enhancer-noop-btn';
+    btn.className = 'osu-enhancer-pp-potential-btn';
     btn.textContent = 'PP potential';
+    btn.title = 'See which of your plays have the most pp to gain from fewer misses';
+    btn.addEventListener('click', onClick);
     document.body.appendChild(btn);
   }
 
-  function removeNoopButton() {
-    const btn = document.querySelector('.osu-enhancer-noop-btn');
+  function removePpPotentialButton() {
+    const btn = document.querySelector('.osu-enhancer-pp-potential-btn');
     if (btn) btn.remove();
   }
 
@@ -85,8 +88,8 @@
     getProfileMeta,
     renderPlayerCardButton,
     removePlayerCardButton,
-    renderNoopButton,
-    removeNoopButton,
+    renderPpPotentialButton,
+    removePpPotentialButton,
     injectStickyToolbarStripes,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -2,9 +2,10 @@
  * Replaces osu's own mod-filter icon row (.beatmapset-scoreboard__mods,
  * next to the Global/Country/Friend Ranking tabs on a beatmap difficulty
  * page) with a small icon-only, multi-select button group: No Mod, HD,
- * DT/NC/Rate Change, HR, FL, NF, EZ, HT, Classic/Lazer. Renders up to 50 matching
- * scores as real rows inside the native .beatmap-scoreboard-table, in
- * place of whatever's normally there — not a separate custom panel.
+ * DT/NC/Rate Change, HR, FL, NF, EZ, HT, Mirror, Classic/Lazer. Renders up
+ * to 50 matching scores as real rows inside the native
+ * .beatmap-scoreboard-table, in place of whatever's normally there — not a
+ * separate custom panel.
  *
  * The native row is removed outright rather than left in place: it 422s
  * for non-supporters — confirmed live: POST .../scores?mods[]=DT returns
@@ -124,6 +125,7 @@
     NF: 'No Fail',
     EZ: 'Easy',
     HT: 'Half Time',
+    MR: 'Mirror',
     CL: 'Classic',
     RC: 'Rate Change',
   };
@@ -153,12 +155,60 @@
     { id: 'nf', kind: 'real', acronym: 'NF' },
     { id: 'ez', kind: 'real', acronym: 'EZ' },
     { id: 'ht', kind: 'real', acronym: 'HT' },
+    { id: 'mr', kind: 'real', acronym: 'MR' },
   ];
 
   // `${beatmapId}:${mode}:${cache key}` -> Promise<result from background>
   // — avoid refetching (and re-spending osu! API rate limit) for a combo
   // already seen.
   const cache = new Map();
+
+  // Picking a different difficulty (osu-web's diff picker, same beatmapset
+  // page) changes location.hash without a full navigation. Whether that
+  // does or doesn't tear down .osu-enhancer-mod-filter-group (osu-web's own
+  // React internals, not something to rely on either way) turned out not
+  // to matter as long as these three are hoisted out of injectButtons'
+  // per-build closure and up here at module scope instead:
+  //
+  // - selectedMods/dtNcState/scoringVersion (the actual filter selection)
+  //   survive a rebuild that resets everything *inside* injectButtons, so a
+  //   fresh group still starts pre-selected instead of silently dropping
+  //   back to "no filter" — see injectButtons' own initializers below.
+  // - lastBeatmapId/currentSession survive injectButtons() bailing early on
+  //   its already-exists check (a rebuild that *doesn't* happen), so
+  //   checkBeatmapChange can still tell the old group's cached results
+  //   apart from the new difficulty and refetch.
+  //
+  // checkBeatmapChange doesn't only compare beatmap ids, either: even with
+  // the id unchanged, it also re-checks whether the table's first row is
+  // still one this file actually rendered (the message-row marker every
+  // renderResults() call adds) — the id somehow lagging behind a DOM swap
+  // osu's own leaderboard-refresh did for the new difficulty, or that swap
+  // landing *after* this file's own refetch resolved and stomping it,
+  // would both otherwise look like a no-op and leave native (unfiltered)
+  // rows on screen despite a mod still showing selected.
+  let selectedMods = null;
+  let dtNcState = null; // null | 'DT' | 'NC' | 'RC' — which state that button is showing
+  let scoringVersion = null; // null | 'classic' | 'lazer'
+  let lastBeatmapId;
+  let currentSession = null; // { isActive, refreshResults } for the live group
+
+  function tableLooksFiltered() {
+    const tbody = document.querySelector(`${sel.scoreboard} .beatmap-scoreboard-table__body`);
+    return !!(tbody && tbody.firstElementChild && tbody.firstElementChild.querySelector('.osu-enhancer-mod-filter-message-cell'));
+  }
+
+  function checkBeatmapChange() {
+    const ctx = getCurrentBeatmapContext();
+    const id = ctx ? ctx.beatmapId : null;
+    if (!currentSession || !currentSession.isActive()) {
+      lastBeatmapId = id;
+      return;
+    }
+    if (id === lastBeatmapId && tableLooksFiltered()) return;
+    lastBeatmapId = id;
+    currentSession.refreshResults();
+  }
 
   function getCurrentBeatmapContext() {
     const match = location.hash.match(/^#(osu|taiko|fruits|mania)\/(\d+)/);
@@ -895,6 +945,14 @@
     const tabs = document.querySelector(sel.scoreboardPageTabs);
     if (!tabs || document.querySelector(`.${GROUP_CLASS}`)) return;
 
+    // A genuine (re)build — reset the change-tracking baseline to this
+    // page's own beatmap id. selectedMods/dtNcState/scoringVersion are
+    // deliberately *not* reset here — they're module-level now (see their
+    // declaration above) precisely so a rebuild keeps whatever filter was
+    // already selected instead of dropping back to "no filter".
+    const initCtx = getCurrentBeatmapContext();
+    lastBeatmapId = initCtx ? initCtx.beatmapId : null;
+
     // Supporter-gated and non-functional for most users (see file
     // comment) — our own group below replaces it, in the same spot.
     const nativeMods = document.querySelector(`${sel.scoreboard} ${sel.scoreboardNativeMods}`);
@@ -903,12 +961,6 @@
     const group = document.createElement('div');
     group.className = GROUP_CLASS;
 
-    // Real-mod combo state: null = nothing selected at all (inactive
-    // unless scoringVersion is set); Set<acronym> once at least one real
-    // mod button (including "No Mod", which selects the empty set) is on.
-    let selectedMods = null;
-    let dtNcState = null; // null | 'DT' | 'NC' | 'RC' — which state that button is showing
-    let scoringVersion = null; // null | 'classic' | 'lazer'
     let savedBody = null;
     let savedTopCards = null; // Node[] | null — the *original* live
     // "other" (non-own, see isOwnTopCard) top-score card node(s), not
@@ -998,14 +1050,20 @@
 
       const mods = selectedMods === null ? null : [...selectedMods];
       const rateChanged = dtNcState === 'RC';
-      const requestKey = `${mods === null ? 'null' : mods.sort().join('+')}:${scoringVersion}:${rateChanged}`;
+      // Includes beatmapId — without it, switching difficulty twice in a
+      // row (same filter both times) while the *first* difficulty's fetch
+      // is still in flight would see this guard as an unchanged key once
+      // that first fetch resolves, letting its now-stale-difficulty result
+      // overwrite the second difficulty's already-rendered one.
+      const requestKey = `${ctx.beatmapId}:${mods === null ? 'null' : mods.sort().join('+')}:${scoringVersion}:${rateChanged}`;
       renderResults(tbody, 'loading', mods, scoringVersion, rateChanged);
       renderTopScore(topContainer, 'loading', ctx.mode);
       const result = await fetchScores(ctx.beatmapId, ctx.mode, mods, scoringVersion, rateChanged);
-      // The selection may have changed again while this fetch was in
-      // flight — don't clobber it with a stale result.
+      // The selection (or difficulty) may have changed again while this
+      // fetch was in flight — don't clobber it with a stale result.
+      const currentCtx = getCurrentBeatmapContext();
       const currentMods = selectedMods === null ? null : [...selectedMods];
-      const currentKey = `${currentMods === null ? 'null' : currentMods.sort().join('+')}:${scoringVersion}:${dtNcState === 'RC'}`;
+      const currentKey = `${currentCtx ? currentCtx.beatmapId : null}:${currentMods === null ? 'null' : currentMods.sort().join('+')}:${scoringVersion}:${dtNcState === 'RC'}`;
       if (currentKey === requestKey) {
         renderResults(tbody, result, mods, scoringVersion, rateChanged);
         renderTopScore(topContainer, result, ctx.mode);
@@ -1139,14 +1197,25 @@
 
     updateButtonVisuals();
     tabs.insertAdjacentElement('afterend', group);
+
+    currentSession = { isActive, refreshResults };
+    // This build's table starts out as whatever native content was already
+    // sitting in the DOM (or, on the very first build, nothing this file
+    // has touched at all) — if a filter carried over from before this
+    // rebuild is still selected, it needs applying to *this* table too,
+    // not just left reflected in the buttons' active/inactive styling.
+    if (isActive()) refreshResults();
   }
 
   // Called on every rescan (content.js). injectButtons() is idempotent
-  // (bails if the group already exists), and a diff/mode switch that
-  // replaces the whole scoreboard subtree removes the old group, so this
-  // naturally re-injects a fresh one — with fresh state — for the new page.
+  // (bails if the group already exists, otherwise reapplies any carried-
+  // over filter itself — see its own end) and checkBeatmapChange() is the
+  // other half: whether or not a rebuild happened, it catches an active
+  // filter whose rendered table no longer matches the current difficulty
+  // and re-fetches for it (see both functions' own comments above).
   function refresh() {
     injectButtons();
+    checkBeatmapChange();
     injectRankBadges();
     reformatPrecision(document.querySelector(sel.scoreboard));
     reformatPrecision(document.querySelector(sel.scoreboardTop));

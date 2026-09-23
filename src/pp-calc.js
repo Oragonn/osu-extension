@@ -42,5 +42,6 @@
     calculatePpAtAccuracy,
     calculateStarRating: async (...args) => (await engine()).calculateStarRating(...args),
     calculateMaxCombo: async (...args) => (await engine()).calculateMaxCombo(...args),
+    calculateObjectCounts: async (...args) => (await engine()).calculateObjectCounts(...args),
   };
 })(typeof window !== 'undefined' ? window : globalThis);

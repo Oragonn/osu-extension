@@ -9,7 +9,7 @@ PP-stats extension.
 
 | Feature | Where to toggle it |
 | --- | --- |
-| Site-wide dark theme (nav, profile, score rows, generic pages) | Toolbar popup or the ⚙ button in osu!'s own nav bar (between "help" and search) |
+| Site-wide dark theme (nav, profile, score rows, generic pages) | Toolbar popup or the floating ⚙ button in the bottom-left corner of osu! pages |
 | "IF FC ###pp" label on any non-FC score row | same |
 | Beatmap cover art behind score rows | same |
 | Downloadable PNG "player card" on your profile | same |
@@ -18,6 +18,9 @@ PP-stats extension.
 | Cover download button on beatmapset pages | same |
 | Score age period highlight on profile Best Performance | same |
 | Purple site accent color on profile pages | same |
+| "🎯" target-rank pp calculator next to Global/Country Ranking on profile pages — remembers the target rank you checked on that profile and keeps showing it there (enter 0 to clear it) | same |
+| "PP potential" panel on profile pages — near-FC Best Performance plays (≤N misses) ranked by pp gained if FC'd | same |
+| "PP Calculator" panel on beatmap pages — pp for a hypothetical mods/acc-or-counts/combo/misses score | same |
 | Default Mode filter on the beatmap listing (osu!, taiko, catch, mania, or Any) — applied on a fresh visit and when you reload (Ctrl+R) from any mode | same — a dropdown rather than a toggle; defaults to osu! |
 | Hide medals you haven't unlocked yet | Button on the Medals section itself |
 | Hide the "medal unlocked" popup | Button on the Medals section itself |
@@ -75,8 +78,8 @@ and `lib/` is plain JS/CSS/HTML/WASM checked in as-is.
   (`src/engines/rosu-engine.js`, the vendored `rosu-pp-js` wrapper; and
   `src/engines/official-engine.js`, the experimental official-ruleset engine
   — see the note above), selected by the `ppEngine` storage toggle.
-- `src/settings-panel.js` injects a ⚙ button into osu!'s own nav bar
-  (between "help" and the search icon) that opens a small toggle panel —
+- `src/settings-panel.js` injects a floating ⚙ button into the bottom-left corner of the page
+  that opens a small toggle panel —
   the primary way to control the extension day-to-day. The toolbar popup
   still works too and stays in sync (same `chrome.storage.local` keys).
 - `src/medals.js` additionally injects two small buttons directly above the
@@ -198,11 +201,14 @@ src/
   cover-art.js    beatmap cover backgrounds (US-010)
   beatmap-picker.js  difficulty names + star rating on the beatmapset picker
   beatmap-cover-download.js  cover download button on beatmapset pages
+  beatmap-pp-calculator.js  "PP Calculator" panel on beatmapset pages — pp for a hypothetical score
   max-sr-chip.js  max star rating chip on beatmapset listing/search cards
   score-age-highlight.js  score age period highlight on Best Performance
   profile-accent-color.js  purple site accent on profile pages
   scores.js       score-row detection + "IF FC" labels (US-007)
-  profile.js      player-card button (US-009) + corner button
+  profile.js      player-card button (US-009) + "PP potential" corner button
+  target-rank.js  target-rank pp calculator next to Global/Country Ranking
+  pp-potential.js "PP potential" panel — near-FC Best Performance plays (≤N misses) ranked by pp gained if FC'd
   medals.js       medal visibility toggles (US-011)
   player-card.js  canvas PNG export (US-009)
   content.js      orchestrator / entry point (US-001)
