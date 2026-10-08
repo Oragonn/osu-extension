@@ -28,7 +28,7 @@
     ppPotentialLastSortDir: 'desc', // 'asc' | 'desc' — sort direction paired with ppPotentialLastSortKey
     defaultBeatmapMode: 'osu', // 'osu' | 'taiko' | 'fruits' | 'mania' | 'any' — Mode filter preselected on /beatmapsets; 'any' leaves osu!'s own default
     medalFilter: 'all', // 'all' | 'completed' | 'missing'
-    ppEngine: 'rosu', // 'rosu' | 'official'
+    ppEngine: 'official', // 'official' | 'rosu' — official matches live pp/SR exactly; rosu-pp lags osu!'s July 2026 rework
     osuApiClientId: '', // for the "DT only" leaderboard lookup (official osu! API v2)
     osuApiClientSecret: '',
     showLeaderboardRank: false, // needs osuApiClientId/Secret above — silently no-ops without them

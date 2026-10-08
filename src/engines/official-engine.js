@@ -281,6 +281,13 @@
         // silently computed every score as if it were lazer-native, which is
         // wrong for stable-origin scores. See engine-bridge/FINDINGS.md.
         legacy: !!scoreState.isLegacy,
+        // A real stable score's ScoreV1 total (score.legacy_total_score).
+        // The real calculator uses it to estimate a non-FC stable score's
+        // combo breaks from score instead of combo alone — without it,
+        // stable scores were up to ~12% off osu!'s own pp. Only for real
+        // scores: a simulated play (if-FC, the calculator page) has no
+        // such total, so leave it undefined there.
+        legacyTotalScore: scoreState.legacyTotalScore,
       });
 
       const result = await call('CalculatePerformance', [beatmap.beatmapId, beatmap.osuFileText, statsJson]);

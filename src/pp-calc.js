@@ -13,10 +13,10 @@
   // call after page load can't race the async storage read below.
   let enginePromise = OsuEnhancer.storage
     .getToggles()
-    .then((toggles) => toggles.ppEngine || 'rosu');
+    .then((toggles) => toggles.ppEngine || 'official');
 
   OsuEnhancer.storage.onToggleChange((key, value) => {
-    if (key === 'ppEngine') enginePromise = Promise.resolve(value || 'rosu');
+    if (key === 'ppEngine') enginePromise = Promise.resolve(value || 'official');
   });
 
   async function engine() {

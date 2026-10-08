@@ -103,6 +103,46 @@ CalculatePerformance`, which now sets `IsLegacyScore` and adds an
 477.43), consistent with the affected logic being about slider-tail/combo
 edge cases rather than a flat multiplier.
 
+## Second accuracy fix: legacy total score (2026-10-08)
+
+Stable non-FC scores were still up to ~12% off live pp. `OsuPerformanceCalculator`
+only uses its score-based miss estimate (`OsuLegacyScoreMissCalculator`) when
+`ScoreInfo.LegacyTotalScore` is set, and falls back to a combo-only guess
+otherwise. The API's `legacy_total_score` is now threaded through
+(`scores.js` / `score-detail.js` → `official-engine.js`'s `legacyTotalScore` →
+`Bridge.CalculatePerformance`), for real scores only — never for simulated
+ones (if-FC, the beatmap calculator).
+
+Measured by running the published `_framework/dotnet.js` directly in Node
+(`await dotnet.create()` works there too) against 600 live top-100 scores from
+`https://osu.ppy.sh/users/<id>/scores/best` plus their `.osu` files: 596/600
+within 0.1% of live pp (max 0.18%, four FL scores), nomod star rating within
+0.00004★ of `difficulty_rating` on all 560 maps. For comparison rosu-pp 4.0.1
+is median 4.2% / max 27% off on the same set.
+
+## .NET 10 (2026-10-08)
+
+`ppy.osu.Game.Rulesets.Osu` 2026.916.0+ only ships `net10.0`, so the bridge
+moved from `net8.0`. Changes that move forced:
+
+- `InvariantGlobalization=true` now requires a native relink, so
+  `WasmBuildNative` is `true` (needs the `wasm-tools` workload).
+- `WasmFingerprintAssets=false` keeps `_framework/` file names stable (net9+
+  hashes them by default); `pages/official-engine-host.js` imports
+  `_framework/dotnet.js` by name.
+- `blazor.boot.json` is gone — the boot manifest is embedded in `dotnet.js`.
+  `System.Diagnostics.DiagnosticSource.wasm` and
+  `System.Security.Principal.Windows.wasm` are no longer emitted.
+
+The `RuntimeInfo` workaround above still holds: the host page initializes and
+calculates correctly in Chromium (verified through the real
+`official-engine-host.html` iframe/postMessage path), with identical results
+to the net8.0 build on the 600-score set.
+
+Rebuild: `dotnet publish -c Release`, then copy
+`bin/Release/net10.0/publish/wwwroot/*` (skip `.gz`/`.br`) over
+`lib/osu-ruleset-bridge/`, deleting files the publish no longer produces.
+
 ## Tooling used for the decompile
 
 These `.wasm` files (for Mono-interpreter, non-AOT builds) are not real

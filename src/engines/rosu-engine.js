@@ -141,6 +141,10 @@
    *   with no stable equivalent — when omitted (e.g. a stable-set score),
    *   rosu-pp assumes every slider end/tick was hit, so leave them
    *   undefined rather than passing 0.
+   *   isLegacy/legacyTotalScore are only read by the official engine
+   *   (legacyTotalScore = a real stable score's legacy_total_score) — this
+   *   engine tells stable apart via the CL mod, and feeding rosu-pp 4.0.1
+   *   the total made no measurable difference to its error vs live pp.
    * @returns {Promise<number|null>} pp value, or null if it couldn't be computed
    */
   async function calculatePp(beatmapId, scoreState) {

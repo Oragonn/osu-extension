@@ -149,6 +149,19 @@ public static partial class Bridge
 
             int maxCombo = (int?)input["combo"] ?? beatmap.GetMaxCombo();
 
+            // A stable score's original ScoreV1 total (API v2's
+            // legacy_total_score). With it, the real calculator estimates a
+            // classic score's combo breaks from how much score was earned
+            // outside the max combo (OsuLegacyScoreMissCalculator) instead of
+            // from combo alone -- the same value osu-tools and osu!'s own
+            // pp processing feed in. Without it, stable scores that aren't a
+            // full combo silently fall back to the cruder combo-based estimate.
+            // A 0 is treated as missing, matching ppy/osu#38754 (2026.916.0,
+            // which needs net10.0 so isn't what this bridge pins).
+            long? legacyTotalScore = (long?)input["legacyTotalScore"];
+            if (legacyTotalScore <= 0)
+                legacyTotalScore = null;
+
             var scoreInfo = new ScoreInfo(beatmap.BeatmapInfo, ruleset.RulesetInfo)
             {
                 Accuracy = ComputeAccuracy(beatmap, statistics),
@@ -156,6 +169,7 @@ public static partial class Bridge
                 Statistics = statistics,
                 Mods = mods,
                 IsLegacyScore = legacy,
+                LegacyTotalScore = legacy ? legacyTotalScore : null,
             };
 
             var difficultyCalculator = ruleset.CreateDifficultyCalculator(working);

@@ -128,11 +128,12 @@
         largeTickHits: stats.large_tick_hit,
         smallTickHits: stats.small_tick_hit,
         isLegacy,
+        legacyTotalScore: score.legacy_total_score,
       });
       if (estimatedPp != null) {
         const title =
           'Estimated — this beatmap isn’t ranked, so it doesn’t award official pp. ' +
-          'May also run behind osu!’s current pp formula until the bundled rosu-pp build is updated for the latest rework.';
+          'With the rosu-pp engine (Settings → Data), it may also run behind osu!’s current pp formula.';
         row.appendChild(
           createStat('pp', `<span class="osu-enhancer-score-detail-pp" title="${title}">${estimatedPp.toFixed(2)}</span>`)
         );

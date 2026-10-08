@@ -1,18 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
     <RunAOTCompilation>false</RunAOTCompilation>
-    <WasmBuildNative>false</WasmBuildNative>
+    <!-- net10.0 requires a native relink whenever InvariantGlobalization is on (needs the wasm-tools workload). -->
+    <WasmBuildNative>true</WasmBuildNative>
     <WasmLinkIcalls>false</WasmLinkIcalls>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- net9.0+ fingerprints _framework file names by default; stable names keep
+         lib/osu-ruleset-bridge/ diffs to the files that actually changed. -->
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,7 +29,7 @@
       (no skin, no audio, no rendering; only beatmap decoding plus
       difficulty/performance calculation), so nothing here needs it at runtime.
     -->
-    <PackageReference Include="ppy.osu.Game.Resources" Version="2026.710.0" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="ppy.osu.Game.Resources" Version="2026.909.0" ExcludeAssets="all" PrivateAssets="all" />
 
     <!--
       Realm/SQLite/Sentry are transitive dependencies of ppy.osu.Game (needed
@@ -36,11 +40,11 @@
       excluded, keeping the managed types available at compile time.
     -->
     <PackageReference Include="Realm" Version="20.1.0" ExcludeAssets="native" />
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.9" ExcludeAssets="native" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" ExcludeAssets="native" />
-    <PackageReference Include="Sentry" Version="6.6.0" ExcludeAssets="native" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.12" ExcludeAssets="native" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" ExcludeAssets="native" />
+    <PackageReference Include="Sentry" Version="6.11.0" ExcludeAssets="native" />
 
-    <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.730.0" />
+    <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.916.0" />
   </ItemGroup>
 
   <ItemGroup>
