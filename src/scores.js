@@ -107,12 +107,22 @@
     return { scores, complete: true };
   }
 
+  // Rows render the score's own play time as <time datetime="...Z">, and
+  // the API returns that same instant as ended_at — beatmap + that instant
+  // pins a row to exactly one score no matter which section it sits in.
+  function scoreTimeKey(beatmapId, iso) {
+    const t = Date.parse(iso || '');
+    return Number.isFinite(t) ? `${beatmapId}:${t}` : null;
+  }
+
   /**
-   * { index, recentByBeatmap, complete }
+   * { index, byTime, recentByBeatmap, complete }
+   * - byTime: scoreTimeKey -> score JSON, the primary row match.
    * - index: beatmapId -> single score JSON, merged across every scores tab
-   *   osu! exposes for this user (first match wins). Correct as long as a
-   *   beatmap only has one score to show, which holds for Pinned/Best/Firsts
-   *   (osu! itself only ever surfaces one row per beatmap there).
+   *   osu! exposes for this user, as a fallback for rows without a readable
+   *   timestamp. Pinned/Best/Firsts win over Recent: they're fetched in
+   *   parallel, and letting whichever request landed first win meant a
+   *   Best row could pick up a newer, lower-pp retry from Recent.
    * - recentByBeatmap: beatmapId -> every "recent" score for that beatmap, in
    *   the order /users/<id>/scores/recent returns them (newest first).
    *   Unlike the other 3 types, Recent can legitimately list the same
@@ -121,6 +131,7 @@
    */
   async function fetchScoreIndex(userId, mode) {
     const index = new Map();
+    const byTime = new Map();
     const recentByBeatmap = new Map();
     let complete = true;
     await Promise.all(
@@ -130,7 +141,9 @@
           if (!result.complete) complete = false;
           result.scores.forEach((s) => {
             if (!s || s.beatmap_id == null) return;
-            if (!index.has(s.beatmap_id)) index.set(s.beatmap_id, s);
+            const timeKey = scoreTimeKey(s.beatmap_id, s.ended_at || s.created_at);
+            if (timeKey && !byTime.has(timeKey)) byTime.set(timeKey, s);
+            if (type !== 'recent' && !index.has(s.beatmap_id)) index.set(s.beatmap_id, s);
             if (type === 'recent') {
               let list = recentByBeatmap.get(s.beatmap_id);
               if (!list) recentByBeatmap.set(s.beatmap_id, (list = []));
@@ -147,7 +160,10 @@
         }
       })
     );
-    return { index, recentByBeatmap, complete };
+    recentByBeatmap.forEach((list, beatmapId) => {
+      if (!index.has(beatmapId)) index.set(beatmapId, list[0]);
+    });
+    return { index, byTime, recentByBeatmap, complete };
   }
 
   function beatmapIdFromRow(row) {
@@ -168,19 +184,25 @@
   // Recent each get their own container) and pairs it with the same
   // position in recentByBeatmap's array — osu! returns that newest-first,
   // the same order the rows themselves render top to bottom.
-  function matchScoreToRow(row, index, recentByBeatmap) {
+  //
+  // Both of those are fallbacks now: the row's own timestamp is tried first,
+  // since the occurrence trick alone also fired on Best/Pinned rows whose
+  // beatmap had retries in Recent, handing them the newest Recent score.
+  function matchScoreToRow(row, index, byTime, recentByBeatmap) {
     const beatmapId = beatmapIdFromRow(row);
+    const timeEl = row.querySelector(sel.scoreRowTime);
+    const timeKey = timeEl && scoreTimeKey(beatmapId, timeEl.getAttribute('datetime'));
+    if (timeKey && byTime.has(timeKey)) return byTime.get(timeKey);
     const recentList = recentByBeatmap.get(beatmapId);
-    if (recentList && recentList.length > 1) {
-      const container = row.closest(sel.scoreRowList);
-      if (container) {
-        const siblings = Array.from(container.querySelectorAll(sel.scoreRow)).filter(
-          (r) => beatmapIdFromRow(r) === beatmapId
-        );
-        const occurrenceIndex = siblings.indexOf(row);
-        if (occurrenceIndex >= 0 && occurrenceIndex < recentList.length) {
-          return recentList[occurrenceIndex];
-        }
+    const container = row.closest(sel.scoreRowList);
+    // Same-beatmap duplicates in one list only ever happen in Recent.
+    if (recentList && recentList.length > 1 && container) {
+      const siblings = Array.from(container.querySelectorAll(sel.scoreRow)).filter(
+        (r) => beatmapIdFromRow(r) === beatmapId
+      );
+      const occurrenceIndex = siblings.indexOf(row);
+      if (siblings.length > 1 && occurrenceIndex >= 0 && occurrenceIndex < recentList.length) {
+        return recentList[occurrenceIndex];
       }
     }
     return index.get(beatmapId);
@@ -373,7 +395,7 @@
       span.className = 'osu-enhancer-unranked-pp';
       span.title =
         'Estimated — this beatmap isn’t ranked, so it doesn’t award official pp. ' +
-        'May also run behind osu!’s current pp formula until the bundled rosu-pp build is updated for the latest rework.';
+        'With the rosu-pp engine (Settings → Data), it may also run behind osu!’s current pp formula.';
       ppEl.appendChild(span);
     }
     span.textContent = `${ppValue.toFixed(2)}pp`;
@@ -436,6 +458,7 @@
           largeTickHits: stats.large_tick_hit,
           smallTickHits: stats.small_tick_hit,
           isLegacy: score.legacy_score_id != null,
+          legacyTotalScore: score.legacy_total_score,
         });
         if (unrankedPp != null) renderUnrankedPp(row, unrankedPp);
       } else {
@@ -468,10 +491,10 @@
     const unprocessed = rows.filter((r) => !r.getAttribute(PROCESSED_ATTR));
     if (unprocessed.length === 0) return [];
 
-    const { index, recentByBeatmap } = await fetchScoreIndexCached(userId, getCurrentMode());
+    const { index, byTime, recentByBeatmap } = await fetchScoreIndexCached(userId, getCurrentMode());
 
     const queue = unprocessed
-      .map((row) => ({ row, score: matchScoreToRow(row, index, recentByBeatmap) }))
+      .map((row) => ({ row, score: matchScoreToRow(row, index, byTime, recentByBeatmap) }))
       .filter((item) => item.score);
 
     // Rows used to be processed one at a time — each waiting on its own
