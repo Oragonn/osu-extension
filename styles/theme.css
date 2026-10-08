@@ -1777,6 +1777,15 @@ html.osu-enhancer-dark .beatmapsets-search-filter__item--active:active {
   color: #cfcfe0;
 }
 
+/* Beatmap leaderboard mod-filter rows/top card: a locally estimated pp for
+   a score osu! returned pp: null for (Mirror, customized rate, most true
+   lazer plays) — same gray as the score-detail estimate above, so it never
+   reads as an awarded value. */
+.pp-value.osu-enhancer-estimated-pp {
+  color: #cfcfe0;
+  font-style: italic;
+}
+
 /* Fixed purple, not hsl(var(--hsl-h1)) — tried that first, but --hsl-h1 on
    this page isn't necessarily osu!'s default pink: a supporter can set
    their own custom profile colour, and confirmed live it's *that* accent

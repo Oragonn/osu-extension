@@ -328,7 +328,11 @@ async function fetchOfficialScores(clientId, clientSecret, beatmapId, mode, mods
   }
 
   const token = await getOsuApiToken(clientId, clientSecret);
-  const matches = (s) => scoreMatchesFilter(s, mods, scoringVersion);
+  // Plain DT/NC means the default 1.5× rate: osu!'s own mods[]=DT pool also
+  // returns customized-rate DT scores (still acronym DT, just with
+  // settings.speed_change), and those belong only under "Rate Change".
+  const wantsDefaultRate = !!mods && mods.some((m) => m === 'DT' || m === 'NC');
+  const matches = (s) => scoreMatchesFilter(s, mods, scoringVersion) && !(wantsDefaultRate && hasCustomRate(s));
 
   if (rateChanged) {
     const { scores, scannedCount } = await fetchRateChangedScores(token, beatmapId, mode, mods, scoringVersion);

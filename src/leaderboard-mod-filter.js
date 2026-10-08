@@ -340,6 +340,9 @@
       // coercing to 0, which would misrepresent "not awarded" as "scored
       // zero pp".
       ppValue: apiScore.pp,
+      // Kept so a null ppValue can still be estimated locally — see
+      // estimatePp below.
+      raw: apiScore,
       playDateIso: apiScore.ended_at,
       // Kept as the raw {acronym, settings} objects (not just acronym
       // strings) — a customized rate (DT/NC/HT played at something other
@@ -382,18 +385,69 @@
   // Matches osu's own row/card markup for a null pp value (see
   // normalizeScore) — a dash with an explanatory tooltip, instead of
   // rounding null down to a misleading "0".
-  function buildPpSpan(ppValue) {
+  //
+  // That dash is only a placeholder when the raw score is available: lazer-
+  // only plays — Mirror, a customized DT/NC rate, most true lazer-scored
+  // plays — come back from the API with pp: null, so the filtered rows for
+  // exactly those filters were all dashes. estimatePp fills the span in
+  // with a locally computed value, styled as an estimate (same gray +
+  // tooltip as score-detail.js's own unawarded-pp estimate).
+  function buildPpSpan(ppValue, rawScore) {
     const span = document.createElement('span');
     span.className = 'pp-value';
     span.setAttribute(PP_PRECISE_ATTR, '1');
     if (ppValue === null || ppValue === undefined) {
       span.title = 'pp is not awarded for this score';
       span.textContent = '-';
+      if (rawScore) fillEstimatedPp(span, rawScore);
     } else {
       span.title = String(ppValue);
       span.textContent = ppValue.toFixed(2);
     }
     return span;
+  }
+
+  // score id -> Promise<number | null>. The same score can be rendered
+  // twice per lookup (filtered #1 is both the top card and row 1), and
+  // re-picking a filter re-renders from fetchScores' cache — neither
+  // should redo the calculation.
+  const estimatedPpCache = new Map();
+
+  function estimatePp(apiScore) {
+    if (!estimatedPpCache.has(apiScore.id)) {
+      const stats = apiScore.statistics || {};
+      estimatedPpCache.set(
+        apiScore.id,
+        OsuEnhancer.ppCalc
+          .calculatePp(apiScore.beatmap_id, {
+            n300: stats.great,
+            n100: stats.ok,
+            n50: stats.meh,
+            combo: apiScore.max_combo,
+            misses: stats.miss || 0,
+            // Raw {acronym, settings} objects — settings carries a
+            // customized rate's speed_change (see normalizeScore's mods).
+            mods: apiScore.mods || [],
+            sliderEndHits: stats.slider_tail_hit,
+            largeTickHits: stats.large_tick_hit,
+            smallTickHits: stats.small_tick_hit,
+            isLegacy: apiScore.legacy_score_id != null,
+            legacyTotalScore: apiScore.legacy_total_score,
+          })
+          .catch(() => null)
+      );
+    }
+    return estimatedPpCache.get(apiScore.id);
+  }
+
+  async function fillEstimatedPp(span, apiScore) {
+    // Both pp engines here only implement osu!standard.
+    if (!apiScore.beatmap_id || apiScore.ruleset_id !== 0) return;
+    const pp = await estimatePp(apiScore);
+    if (pp == null || !Number.isFinite(pp)) return;
+    span.textContent = pp.toFixed(2);
+    span.title = `Estimated — osu! doesn't award pp for this score (${pp.toFixed(2)})`;
+    span.classList.add('osu-enhancer-estimated-pp');
   }
 
   // osu-web's own native rows/top cards (shown whenever no mod filter is
@@ -649,7 +703,7 @@
       )
     );
 
-    tr.appendChild(cellSpan(null, buildPpSpan(score.ppValue)));
+    tr.appendChild(cellSpan(null, buildPpSpan(score.ppValue, score.raw)));
 
     tr.appendChild(
       cellSpan('beatmap-scoreboard-table__cell-content--time', formatRelativeTime(score.playDateIso))
@@ -801,7 +855,7 @@
     stat(detailGroup, 'meh', String(score.count50), 'beatmap-score-top__stat-header--hit-meh', 'beatmap-score-top__stat-value--smaller beatmap-score-top__stat-value--hit-meh');
     stat(detailGroup, 'Miss', String(score.countMiss), 'beatmap-score-top__stat-header--hit-miss', 'beatmap-score-top__stat-value--smaller beatmap-score-top__stat-value--hit-miss');
 
-    stat(detailGroup, 'pp', buildPpSpan(score.ppValue), null, 'beatmap-score-top__stat-value--smaller u-hover');
+    stat(detailGroup, 'pp', buildPpSpan(score.ppValue, score.raw), null, 'beatmap-score-top__stat-value--smaller u-hover');
 
     const timeEl = document.createElement('time');
     timeEl.className = 'js-tooltip-time';
